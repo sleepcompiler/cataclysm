@@ -1,7 +1,16 @@
 {
   "name": "@hex-strategy/shared",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "module": "index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./index.ts",
+      "require": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc"
   },
