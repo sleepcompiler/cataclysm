@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { MatchManager } from "./matchManager";
+import { MatchManager, generateMatchCode } from "./matchManager";
 
 // Socket shape expected from the WS layer — playerId gets set on connection/init
 interface LobbySocket extends WebSocket {
@@ -8,9 +8,6 @@ interface LobbySocket extends WebSocket {
   deck?: string[];
 }
 
-function makePrivateCode() {
-  return Math.random().toString(36).substring(2, 6).toUpperCase();
-}
 
 export class LobbyManager {
   private queue: LobbySocket[] = [];
@@ -50,30 +47,30 @@ export class LobbyManager {
   }
 
   createPrivate(ws: LobbySocket, deck?: string[]) {
-    const code = makePrivateCode();
+    const code = generateMatchCode();
     this.privatePending.set(code, { ws, deck });
     ws.send(JSON.stringify({ type: "private_created", code }));
   }
 
-  joinPrivate(ws: LobbySocket, code: string, deck?: string[]) {
-    if (!ws.playerId) return;
+  joinPrivate(ws: LobbySocket, code: string, deck?: string[]): boolean {
+    if (!ws.playerId) return false;
     const pending = this.privatePending.get(code);
 
     if (!pending || pending.ws.readyState !== WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "error", message: "invalid or expired code" }));
-      return;
+      return false;
     }
 
     if (pending.ws.playerId === ws.playerId) {
       ws.send(JSON.stringify({ type: "error", message: "You cannot match against yourself" }));
-      return;
+      return true;
     }
 
     ws.deck = deck;
     pending.ws.deck = pending.deck;
 
     this.privatePending.delete(code);
-    this.startMatch([pending.ws, ws]);
+    this.startMatch([pending.ws, ws], code);
+    return true;
   }
 
   // Removes a socket from any lobby state on disconnect
@@ -84,14 +81,14 @@ export class LobbyManager {
     }
   }
 
-  private startMatch(sockets: LobbySocket[]) {
+  private startMatch(sockets: LobbySocket[], privateCode?: string) {
     const playerConfigs = sockets.map(s => ({
       id: s.playerId ?? `anon_${Math.random().toString(36).slice(2, 7)}`,
       name: s.playerName ?? "Anon",
-      deck: s.deck // pass the deck through
+      deck: s.deck
     }));
 
-    const session = this.matchManager.createMatch(playerConfigs, Date.now());
+    const session = this.matchManager.createMatch(playerConfigs, Date.now(), privateCode);
 
     sockets.forEach((s, i) => {
       const config = playerConfigs[i];
@@ -99,6 +96,7 @@ export class LobbyManager {
       s.send(JSON.stringify({
         type: "match_found",
         matchId: session.getMatchId(),
+        matchCode: session.getMatchCode(),
         playerId: config.id,
       }));
     });

@@ -1,20 +1,29 @@
 <script lang="ts">
-  import { projectedHandStore, playerIdStore, projectedCatnipStore, selectedCardIdStore, isMyTurnStore, selectedUnitIdStore } from "../game/gameClient";
+  import { 
+    projectedHandStore, 
+    playerIdStore, 
+    projectedCatnipStore, 
+    selectedCardIdStore, 
+    isMyTurnStore, 
+    selectedUnitIdStore,
+    isSpectatorStore
+  } from "../game/gameClient";
 
   $: hand = $projectedHandStore || [];
   $: catnip = $projectedCatnipStore;
 
   function selectCard(cardId: string, cost: number) {
-    if (!$isMyTurnStore) return; // ignore clicks when it's not our turn
+    if (!$isMyTurnStore || $isSpectatorStore) return; // ignore clicks
     if (catnip >= cost) {
       $selectedCardIdStore = $selectedCardIdStore === cardId ? null : cardId;
       if ($selectedCardIdStore) {
-        $selectedUnitIdStore = null; // Clear unit selection to allow card tooltip
+        $selectedUnitIdStore = null; 
       }
     }
   }
 </script>
 
+{#if !$isSpectatorStore}
 <div class="hand-outer" class:disabled-hand={!$isMyTurnStore}>
   <div class="feed-indicator">Catnip: {catnip}</div>
   <div class="hand-scroll-container">
@@ -45,6 +54,7 @@
     </div>
   </div>
 </div>
+{/if}
 
 <style>
   .hand-outer {

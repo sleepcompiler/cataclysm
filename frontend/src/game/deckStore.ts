@@ -4,54 +4,69 @@ import { CARD_LIBRARY, DEFAULT_DECK, validateDeck } from '@hex-strategy/shared';
 export interface SavedDeck {
   name: string;
   cards: string[]; // array of templateIds
+  readonly?: boolean;
 }
 
 const STORAGE_KEY = 'hex_strategy_decks';
+export const STARTER_DECK_ID = '__starter_standard__';
 
 function getInitialDecks(): Record<string, SavedDeck> {
   const stored = localStorage.getItem(STORAGE_KEY);
+  let userDecks: Record<string, SavedDeck> = {};
+  
   if (stored) {
     try {
-      return JSON.parse(stored);
+      userDecks = JSON.parse(stored);
     } catch (e) {
       console.error('Failed to parse decks from localStorage', e);
     }
   }
   
-  // Return a default starter deck if nothing is stored
+  // Always provide the official starter deck
   return {
-    'Starter Deck': {
+    ...userDecks,
+    [STARTER_DECK_ID]: {
       name: 'Starter Deck',
-      cards: [...DEFAULT_DECK]
+      cards: [...DEFAULT_DECK],
+      readonly: true
     }
   };
 }
 
 export const decksStore = writable<Record<string, SavedDeck>>(getInitialDecks());
-export const selectedDeckNameStore = writable<string>('Starter Deck');
+export const selectedDeckNameStore = writable<string>(STARTER_DECK_ID);
 
 // Sync with localStorage
 decksStore.subscribe(value => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  // Only store user-created decks; don't persist the starter to the same key 
+  // (we re-inject it on load anyway)
+  const toStore = { ...value };
+  delete toStore[STARTER_DECK_ID];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
 });
 
 export function saveDeck(name: string, cards: string[]) {
+  // If editing the starter or a readonly deck, saving with the same name actually creates a new entry
+  // unless we want to prevent that. Usually "Save" on a template should suggest a new name.
+  // We'll use the name as the key if it's NOT the starter ID.
+  const key = name === 'Starter Deck' ? name : name; 
+  
   decksStore.update(d => ({
     ...d,
-    [name]: { name, cards }
+    [name]: { name, cards, readonly: false }
   }));
 }
 
-export function deleteDeck(name: string) {
-  if (name === 'Starter Deck') return; // protect starter
+export function deleteDeck(id: string) {
+  if (id === STARTER_DECK_ID) return; // protect starter
   decksStore.update(d => {
     const next = { ...d };
-    delete next[name];
+    delete next[id];
     return next;
   });
   
-  if (get(selectedDeckNameStore) === name) {
-    selectedDeckNameStore.set('Starter Deck');
+  if (get(selectedDeckNameStore) === id) {
+    selectedDeckNameStore.set(STARTER_DECK_ID);
   }
 }
 

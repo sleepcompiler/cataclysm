@@ -13,9 +13,20 @@ export const STAGE_1_BUILDING_TEMPLATES = ["litter_box", "scratching_post", "tre
 export const STAGE_1_TRAP_TEMPLATES = ["yarn_ball", "cucumber"];
 export const STARTER_TEMPLATES = [...STAGE_1_UNIT_TEMPLATES, ...STAGE_1_BUILDING_TEMPLATES, ...STAGE_1_TRAP_TEMPLATES];
 
-export const VALIDATION_RULES = {
+export interface DeckFormat {
+  id: string;
+  name: string;
+  deckSize: number;
+  maxCopies: number;
+  requireStage1: boolean;
+}
+
+export const STANDARD_FORMAT: DeckFormat = {
+  id: "standard",
+  name: "Standard",
   deckSize: 25,
   maxCopies: 3,
+  requireStage1: true,
 };
 
 export const DEFAULT_DECK = [
@@ -307,11 +318,11 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
   },
 };
 
-export function validateDeck(deck: string[]): { valid: boolean; errors: string[] } {
+export function validateDeck(deck: string[], format: DeckFormat = STANDARD_FORMAT): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
-  if (deck.length !== VALIDATION_RULES.deckSize) {
-    errors.push(`Deck must have exactly ${VALIDATION_RULES.deckSize} cards (current: ${deck.length}).`);
+  if (deck.length !== format.deckSize) {
+    errors.push(`Deck must have exactly ${format.deckSize} cards (current: ${deck.length}).`);
   }
   
   const counts: Record<string, number> = {};
@@ -319,9 +330,9 @@ export function validateDeck(deck: string[]): { valid: boolean; errors: string[]
   
   for (const id of deck) {
     counts[id] = (counts[id] || 0) + 1;
-    if (counts[id] > VALIDATION_RULES.maxCopies) {
+    if (counts[id] > format.maxCopies) {
       const name = CARD_LIBRARY[id]?.name || id;
-      errors.push(`Maximum 3 copies of '${name}' allowed.`);
+      errors.push(`Maximum ${format.maxCopies} copies of '${name}' allowed.`);
     }
     
     if (STAGE_1_UNIT_TEMPLATES.includes(id) || STAGE_1_BUILDING_TEMPLATES.includes(id)) {
@@ -329,7 +340,7 @@ export function validateDeck(deck: string[]): { valid: boolean; errors: string[]
     }
   }
   
-  if (stage1Count === 0) {
+  if (format.requireStage1 && stage1Count === 0) {
     errors.push("Deck must have at least one Stage 1 unit or building for a valid turn 1 play.");
   }
   

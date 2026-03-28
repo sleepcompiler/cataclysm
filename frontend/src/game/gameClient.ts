@@ -72,6 +72,8 @@ export const isMyTurnStore = derived(
   }
 );
 
+export const isSpectatorStore = writable<boolean>(false);
+
 // ── Socket ────────────────────────────────────────────────────────────────────
 let socket: WebSocket | null = null;
 let pendingMessages: string[] = []; // messages queued before socket is open
@@ -137,9 +139,16 @@ function handleServerMessage(payload: any) {
     case "match_found":
       lobbyStatusStore.set("in_match");
       activeMatchIdStore.set(payload.matchId);
+      privateCodeStore.set(payload.matchCode);
+      isSpectatorStore.set(!!payload.isSpectator);
       // The server already added us to the session when startMatch ran —
       // but we still send init so it can register our WS against our player slot.
-      socket?.send(JSON.stringify({ type: "init", matchId: payload.matchId, playerId: payload.playerId }));
+      socket?.send(JSON.stringify({ 
+        type: "init", 
+        matchId: payload.matchId, 
+        playerId: payload.playerId,
+        isSpectator: !!payload.isSpectator
+      }));
       break;
 
     case "state_update":

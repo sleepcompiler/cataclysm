@@ -9,6 +9,7 @@ import { resolveActiveQuirk } from "../simulation/quirkSystem";
 
 export class Match {
   public id: string;
+  public matchCode: string;
   public players: { id: PlayerId, name: string }[];
   private engine: SimulationEngine;
 
@@ -28,8 +29,9 @@ export class Match {
     this.eventCallback?.(events);
   }
 
-  constructor(id: string, players: { id: PlayerId, name: string, deck?: string[] }[], seed: number) {
+  constructor(id: string, matchCode: string, players: { id: PlayerId, name: string, deck?: string[] }[], seed: number) {
     this.id = id;
+    this.matchCode = matchCode;
     this.players = players;
 
     const { tiles, startPositions } = generateSymmetricMap(players.length, seed);

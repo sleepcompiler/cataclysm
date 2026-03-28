@@ -5,6 +5,8 @@
   import { tweened } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
 
+  export let mapHovered = false;
+
   const selectedUnit = derived(
     [gameStateStore, selectedUnitIdStore, selectedCardIdStore, projectedHandStore],
     ([$state, $uid, $cid, $hand]) => {
@@ -217,7 +219,11 @@
 {#if $selectedUnit}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="unit-info" on:click={handleDismiss}>
+  <div 
+    class="unit-info" 
+    class:targeting-hidden={mapHovered && !!$selectedCardIdStore}
+    on:click={handleDismiss}
+  >
     <div class="header">
       <h3>{$selectedUnit.name}</h3>
       <div class="owner" class:mine={$selectedUnit.owner === $playerIdStore}>
@@ -365,6 +371,12 @@
     pointer-events: auto;
     backdrop-filter: blur(16px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .unit-info.targeting-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
   }
 
   @media (orientation: portrait) {

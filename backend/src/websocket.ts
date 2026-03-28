@@ -43,7 +43,24 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
         return;
       }
       if (data.type === "join_private") {
-        lobbyManager.joinPrivate(ws, data.code, data.deck);
+        const handledInLobby = lobbyManager.joinPrivate(ws, data.code, data.deck);
+        if (handledInLobby) return;
+
+        // If not in lobby, check if it's an active match we can rejoin or spectate
+        const session = matchManager.getSessionByCode(data.code);
+        if (!session) {
+          ws.send(JSON.stringify({ type: "error", message: "invalid or expired code" }));
+          return;
+        }
+
+        const isPlayer = session.isParticipant(ws.playerId!);
+        ws.send(JSON.stringify({
+          type: "match_found",
+          matchId: session.getMatchId(),
+          matchCode: session.getMatchCode(),
+          playerId: ws.playerId,
+          isSpectator: !isPlayer
+        }));
         return;
       }
 
@@ -54,7 +71,11 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
 
         const session = matchManager.getSession(ws.matchId!);
         if (session) {
-          session.addClient(ws.playerId!, ws);
+          if (data.isSpectator) {
+            session.addSpectator(ws);
+          } else {
+            session.addClient(ws.playerId!, ws);
+          }
           ws.send(JSON.stringify({ type: "state_update", state: session.getState(ws.playerId!) }));
         }
         return;

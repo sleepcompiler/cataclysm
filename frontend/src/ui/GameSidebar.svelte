@@ -3,9 +3,11 @@
     gameStateStore, 
     playerIdStore, 
     isMyTurnStore, 
+    isSpectatorStore,
     hasEndedTurnStore, 
     combatLogStore, 
-    sendCommand 
+    sendCommand,
+    privateCodeStore
   } from "../game/gameClient";
   import { onMount, afterUpdate } from "svelte";
 
@@ -33,6 +35,13 @@
     }
   });
 
+  function copyInviteLink() {
+    if (!$privateCodeStore) return;
+    const url = `${window.location.origin}${window.location.pathname}?match=${$privateCodeStore}`;
+    navigator.clipboard.writeText(url);
+    alert('Invite link copied to clipboard!');
+  }
+
 </script>
 
 <div class="ui-sidebar" class:log-open={showLog}>
@@ -54,6 +63,14 @@
       {showLog ? "Back" : "📜 Log"}
     </button>
   </div>
+
+  {#if $privateCodeStore}
+    <div class="match-code-badge">
+      <span class="label">Code:</span>
+      <span class="code">{$privateCodeStore}</span>
+      <button class="copy-btn" on:click={copyInviteLink} title="Copy Invite Link">🔗</button>
+    </div>
+  {/if}
 
   <!-- player stat boxes -->
   {#if $gameStateStore}
@@ -93,10 +110,12 @@
   <div class="controls">
     <button
       class="end-turn-btn"
-      disabled={$hasEndedTurnStore || !$isMyTurnStore}
+      disabled={$hasEndedTurnStore || !$isMyTurnStore || $isSpectatorStore}
       on:click={handleEndTurn}
     >
-      {#if !$isMyTurnStore}
+      {#if $isSpectatorStore}
+        Viewing
+      {:else if !$isMyTurnStore}
         Wait...
       {:else if $hasEndedTurnStore}
         Resolving...
@@ -222,4 +241,27 @@
   }
   .end-turn-btn:hover:not(:disabled) { background: #43a047; }
   .end-turn-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+  .match-code-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e293b;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    border: 1px solid #334155;
+  }
+  .match-code-badge .label { color: #94a3b8; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+  .match-code-badge .code { color: #f1f5f9; font-weight: bold; font-family: monospace; font-size: 14px; letter-spacing: 1px; }
+  .match-code-badge .copy-btn {
+    background: #334155;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+  .match-code-badge .copy-btn:hover { background: #475569; }
 </style>
