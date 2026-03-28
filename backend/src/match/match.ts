@@ -1,8 +1,8 @@
 import { ClientCommand, GameState, PlayerId, MoveUnitCommand, PlayCardCommand } from "@hex-strategy/shared";
+import { STAGE_1_UNIT_TEMPLATES, STAGE_1_BUILDING_TEMPLATES, DEFAULT_DECK, createCardInstance } from "../cards/cards";
 import { SimulationEngine } from "../simulation/simulationEngine";
 import { generateSymmetricMap } from "../map/mapGenerator";
 import { createBuilding } from "../game/building";
-import { createCardInstance, CARD_LIBRARY, STARTER_TEMPLATES, DEFAULT_DECK, STAGE_1_UNIT_TEMPLATES } from "../cards/cards";
 import { calculateTerritory } from "../territory/territorySystem";
 import { resolveInstantCardPlay } from "../simulation/phaseSystem";
 import { resolveActiveQuirk } from "../simulation/quirkSystem";
@@ -28,7 +28,7 @@ export class Match {
     this.eventCallback?.(events);
   }
 
-  constructor(id: string, players: { id: PlayerId, name: string }[], seed: number) {
+  constructor(id: string, players: { id: PlayerId, name: string, deck?: string[] }[], seed: number) {
     this.id = id;
     this.players = players;
 
@@ -55,7 +55,8 @@ export class Match {
       tower.modifiers = [];
       state.buildings[tower.id] = tower;
 
-      const deckTemplates = [...DEFAULT_DECK];
+      // Use the player's custom deck or the default
+      const deckTemplates = [...(p.deck ?? DEFAULT_DECK)];
 
       // Fisher-Yates shuffle
       for (let i = deckTemplates.length - 1; i > 0; i--) {
@@ -63,8 +64,10 @@ export class Match {
         [deckTemplates[i], deckTemplates[j]] = [deckTemplates[j], deckTemplates[i]];
       }
 
-      // guarantee a Stage 1 unit (kitten) so you can do something turn 1
-      const starterIndex = deckTemplates.findIndex(id => STAGE_1_UNIT_TEMPLATES.includes(id));
+      // guarantee a Stage 1 unit (kitten) or building so they can play turn 1
+      const starterIndex = deckTemplates.findIndex(id => 
+        STAGE_1_UNIT_TEMPLATES.includes(id) || STAGE_1_BUILDING_TEMPLATES.includes(id)
+      );
       if (starterIndex > 4 && starterIndex !== -1) {
          [deckTemplates[0], deckTemplates[starterIndex]] = [deckTemplates[starterIndex], deckTemplates[0]];
          // shuffle the top 5 loosely so we don't always draw the kitten at draw index 0

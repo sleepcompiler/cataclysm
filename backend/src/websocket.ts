@@ -31,7 +31,7 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
 
       // Lobby commands — handled before a match exists
       if (data.type === "join_queue") {
-        lobbyManager.joinQueue(ws);
+        lobbyManager.joinQueue(ws, data.deck);
         return;
       }
       if (data.type === "leave_queue") {
@@ -39,11 +39,11 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
         return;
       }
       if (data.type === "create_private") {
-        lobbyManager.createPrivate(ws);
+        lobbyManager.createPrivate(ws, data.deck);
         return;
       }
       if (data.type === "join_private") {
-        lobbyManager.joinPrivate(ws, data.code);
+        lobbyManager.joinPrivate(ws, data.code, data.deck);
         return;
       }
 

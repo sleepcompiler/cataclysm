@@ -20,11 +20,15 @@
     joinPrivateMatch,
   } from './game/gameClient';
 
+  import { decksStore, selectedDeckNameStore } from './game/deckStore';
+  import { validateDeck } from '@hex-strategy/shared';
+
   let view: 'menu' | 'deckbuilder' | 'game' = 'menu';
   let privateCodeInput = '';
   let showJoinPrivate = false;
   let nameInput = $playerNameStore;
   let showLog = false;
+  let showDeckSelect = false;
 
   $: if ($lobbyStatusStore === 'in_match') {
     view = 'game';
@@ -32,6 +36,13 @@
 
   function handleNameChange() {
     if (nameInput.trim()) savePlayerName(nameInput.trim());
+  }
+
+  function selectDeck(name: string) {
+    const deck = $decksStore[name];
+    if (!deck || !validateDeck(deck.cards).valid) return;
+    selectedDeckNameStore.set(name);
+    showDeckSelect = false;
   }
 </script>
 
@@ -56,6 +67,39 @@
           placeholder="Your name"
           maxlength="20"
         />
+      </div>
+
+      <!-- Deck Selector -->
+      <div class="deck-selector">
+        <div class="current-selection" on:click={() => showDeckSelect = !showDeckSelect}>
+          <span class="label">Playing with:</span>
+          <span class="deck-name">{$selectedDeckNameStore}</span>
+          <span class="chevron">{showDeckSelect ? '▲' : '▼'}</span>
+        </div>
+
+        {#if showDeckSelect}
+          <div class="deck-dropdown">
+            {#each Object.entries($decksStore) as [name, deck]}
+              {@const isValid = validateDeck(deck.cards).valid}
+              <div 
+                class="deck-option" 
+                class:selected={name === $selectedDeckNameStore}
+                class:invalid={!isValid}
+                on:click={() => isValid && selectDeck(name)}
+              >
+                <div class="option-info">
+                  <span class="name">{name}</span>
+                  {#if !isValid}
+                    <span class="error-tag">Invalid (25 cards required)</span>
+                  {/if}
+                </div>
+                {#if name === $selectedDeckNameStore}
+                  <span class="check">✓</span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
       </div>
 
       {#if $lobbyStatusStore === 'idle'}
@@ -148,24 +192,138 @@
 
   /* Name row */
   .name-row {
-    display: flex;
-    gap: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .name-input {
-    padding: 8px 16px;
-    font-size: 1rem;
-    border: 2px solid #ffa0c0;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+    border: 2px solid #ffdde8;
     border-radius: 50px;
     outline: none;
-    background: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.9);
     color: #444;
     text-align: center;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
+    width: 240px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
   }
 
   .name-input:focus {
     border-color: #ff6090;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 96, 144, 0.1);
+  }
+
+  .deck-selector {
+    position: relative;
+    width: 280px;
+    margin-bottom: 1.5rem;
+    z-index: 100;
+  }
+
+  .current-selection {
+    background: white;
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 2px solid #ffdde8;
+    transition: all 0.2s;
+  }
+
+  .current-selection:hover {
+    border-color: #ff6090;
+    transform: translateY(-2px);
+  }
+
+  .label {
+    font-size: 0.8rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+  }
+
+  .deck-name {
+    flex: 1;
+    font-weight: bold;
+    color: #444;
+  }
+
+  .chevron {
+    color: #ff6090;
+    font-size: 0.8rem;
+  }
+
+  .deck-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border: 1px solid #ffdde8;
+    overflow: hidden;
+    animation: slideDownFade 0.2s ease-out;
+  }
+
+  @keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .deck-option {
+    padding: 1rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    border-bottom: 1px solid #fff0f5;
+    transition: background 0.2s;
+  }
+
+  .deck-option:last-child {
+    border-bottom: none;
+  }
+
+  .deck-option:hover:not(.invalid) {
+    background: #fffafa;
+  }
+
+  .deck-option.selected {
+    background: #fff5f8;
+  }
+
+  .deck-option.invalid {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8fafc;
+  }
+
+  .option-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .option-info .name {
+    font-weight: 600;
+  }
+
+  .error-tag {
+    font-size: 0.7rem;
+    color: #ef4444;
+    font-weight: bold;
+  }
+
+  .check {
+    color: #ff6090;
+    font-weight: bold;
   }
 
   /* Buttons */

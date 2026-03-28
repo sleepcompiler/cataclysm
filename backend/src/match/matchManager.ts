@@ -9,7 +9,7 @@ function generateId() {
 export class MatchManager {
   private sessions: Map<string, MatchSession> = new Map();
 
-  createMatch(players: { id: PlayerId, name: string }[], seed: number) {
+  createMatch(players: { id: PlayerId, name: string, deck?: string[] }[], seed: number) {
     const match = new Match(generateId(), players, seed);
     const session = new MatchSession(match);
     this.sessions.set(match.id, session);

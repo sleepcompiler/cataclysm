@@ -156,10 +156,12 @@ function handleServerMessage(payload: any) {
   }
 }
 
+import { getSelectedDeck } from "./deckStore";
+
 export function joinQueue() {
   lobbyErrorStore.set(null);
   connectLobby();
-  safeSend({ type: "join_queue" });
+  safeSend({ type: "join_queue", deck: getSelectedDeck().cards });
 }
 
 export function leaveQueue() {
@@ -170,13 +172,13 @@ export function leaveQueue() {
 export function createPrivateMatch() {
   lobbyErrorStore.set(null);
   connectLobby();
-  safeSend({ type: "create_private" });
+  safeSend({ type: "create_private", deck: getSelectedDeck().cards });
 }
 
 export function joinPrivateMatch(code: string) {
   lobbyErrorStore.set(null);
   connectLobby();
-  safeSend({ type: "join_private", code });
+  safeSend({ type: "join_private", code, deck: getSelectedDeck().cards });
 }
 
 // ── Game state helpers (unchanged) ───────────────────────────────────────────
