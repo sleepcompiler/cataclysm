@@ -15,6 +15,7 @@ interface AttackIntent {
 function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
   let baseAtk = 0;
   let baseSpeed = 0;
+  let baseRange = 1;
   let maxHp = entity.maxHp;
 
   let quirks: import("@hex-strategy/shared").Quirk[] = [];
@@ -22,7 +23,9 @@ function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
   if (isBuilding) {
     const stats = BUILDING_DICTIONARY[entity.type];
     if (stats) {
+      baseAtk = stats.attack || 0;
       baseSpeed = stats.speed;
+      baseRange = stats.range || 0; // Buildings default to 0 range (no attack)
       quirks = stats.quirks || [];
     }
   } else {
@@ -31,6 +34,7 @@ function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
     if (stats) {
       baseAtk = stats.attack;
       baseSpeed = stats.speed;
+      baseRange = stats.range || 1; // Units default to 1 range (melee)
       quirks = stats.quirks || [];
     }
   }
@@ -51,13 +55,13 @@ function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
     if (q.trigger === "combat_calculation") {
       if (q.id === "desperation_strike") {
         if (entity.hp < maxHp / 3) {
-          finalAtk *= 2; // double attack in red HP
+          finalAtk *= (q.value || 2); 
         }
       }
     }
   }
 
-  return { attack: finalAtk, speed: finalSpeed };
+  return { attack: finalAtk, speed: finalSpeed, range: baseRange };
 }
 
 // find the first enemy unit or building adjacent to an attacker
@@ -65,9 +69,9 @@ function findTarget(
   attacker: Unit | Building,
   allUnits: Unit[],
   allBuildings: Building[],
-  ownerId: string
+  ownerId: string,
+  range: number
 ): { target: Unit | Building, isBuilding: boolean } | null {
-  const range = 1;
   const attackerPos = (attacker as any).position;
 
   // 1. Check for TAUNT (Scratch Posts) within range 2 of the attacker
@@ -120,33 +124,34 @@ export function processDamageAndDeath(state: GameState): {
 
   for (const u of allUnits) {
     if (u.hasAttackedThisTurn || u.hp <= 0) continue;
-    const found = findTarget(u, allUnits, allBuildings, u.owner);
+    const stats = getEffectiveStats(u, false);
+    const found = findTarget(u, allUnits, allBuildings, u.owner, stats.range);
     if (found) {
       intents.push({
         attacker: u,
         attackerIsBuilding: false,
         target: found.target,
         targetIsBuilding: found.isBuilding,
-        speed: getEffectiveStats(u, false).speed,
+        speed: stats.speed,
       });
     }
   }
 
   for (const b of allBuildings) {
-    if (b.hp <= 0 || getEffectiveStats(b, true).attack === 0) continue;
-    // buildings retaliate against units in range
-    for (const u of allUnits) {
-      if (u.owner === b.owner || u.hp <= 0) continue;
-      if (hexDistance(b.position, u.position) <= 1) {
-        intents.push({
-          attacker: b,
-          attackerIsBuilding: true,
-          target: u,
-          targetIsBuilding: false,
-          speed: getEffectiveStats(b, true).speed,
-        });
-        break; // one target per building per round
-      }
+    if (b.hp <= 0) continue;
+    const stats = getEffectiveStats(b, true);
+    if (stats.attack === 0 || stats.range === 0) continue;
+
+    // buildings target any enemy in range
+    const found = findTarget(b, allUnits, allBuildings, b.owner, stats.range);
+    if (found) {
+      intents.push({
+        attacker: b,
+        attackerIsBuilding: true,
+        target: found.target,
+        targetIsBuilding: found.isBuilding,
+        speed: stats.speed,
+      });
     }
   }
 
@@ -174,8 +179,9 @@ export function processDamageAndDeath(state: GameState): {
 
     for (const q of targetQuirks) {
       if (q.id === "fluffy") {
-        dmg = Math.max(0, dmg - 2);
-        console.log(`[combat] Fluffy fur reduced damage by 2. New dmg: ${dmg}`);
+        const reduction = q.value || 0;
+        dmg = Math.max(0, dmg - reduction);
+        console.log(`[combat] Fluffy fur reduced damage by ${reduction}. New dmg: ${dmg}`);
       }
     }
 
@@ -214,7 +220,8 @@ export function processDamageAndDeath(state: GameState): {
 
     // Mirror quirk (Siamese)
     if (targetQuirks.some(q => q.id === "mirror") && dmg > 0) {
-      const reflected = Math.floor(dmg * 0.5);
+      const q = targetQuirks.find(q => q.id === "mirror")!;
+      const reflected = Math.floor(dmg * (q.value || 0.5));
       attacker.hp -= reflected;
       console.log(`[combat] Mirror! Reflected ${reflected} damage back to ${getPlayerName(attackerOwner)}`);
     }
@@ -246,9 +253,11 @@ export function processDamageAndDeath(state: GameState): {
       // Sharpness logic (Panther)
       if (killerIntent && !killerIntent.attackerIsBuilding) {
         const killer = killerIntent.attacker as Unit;
-        if (UNIT_DICTIONARY[killer.type]?.quirks?.some(q => q.id === "sharpness")) {
-          killer.modifiers.push({ source: "sharpness", stat: "attack", amount: 1, duration: "permanent" });
-          console.log(`[combat] Panther ${killer.owner} gained +1 attack from KO`);
+        const sharpnessQuirk = UNIT_DICTIONARY[killer.type]?.quirks?.find(q => q.id === "sharpness");
+        if (sharpnessQuirk) {
+          const bonus = sharpnessQuirk.value || 1;
+          killer.modifiers.push({ source: "sharpness", stat: "attack", amount: bonus, duration: "permanent" });
+          console.log(`[combat] Panther ${killer.owner} gained +${bonus} attack from KO`);
         }
       }
 

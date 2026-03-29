@@ -103,10 +103,10 @@ export function resolveInstantCardPlay(
         }
       }
     } else if (card.templateId === "random_evolution") {
-      const validTargets = Object.values(state.units).filter(u => 
-        u.owner === play.playerId && 
-        ["house_kitten", "stray_kitten", "tabby", "tom", "alley_cat"].includes(u.type)
-      );
+      const validTargets = Object.values(state.units).filter(u => {
+        const uStats = UNIT_DICTIONARY[u.type];
+        return u.owner === play.playerId && uStats && uStats.stage < 3;
+      });
       if (validTargets.length === 0) {
         console.log(`[PhaseSystem] Random Evolution rejected: No Stage 1 or 2 cats on board.`);
         isValidPlay = false;
@@ -164,8 +164,9 @@ export function resolveInstantCardPlay(
 
           if (consumesInstinct) {
             const unitType = effect.params.unitType;
-            const isStray = ["tom", "alley_cat", "lion", "panther"].includes(unitType || "");
-            const isHouse = ["tabby", "siamese", "sphynx", "maine_coon", "calico"].includes(unitType || "");
+            const targetStats = UNIT_DICTIONARY[unitType || ""];
+            const isStray = targetStats?.line === "stray";
+            const isHouse = targetStats?.line === "house";
             
             const instinctIndex = player.hand.findIndex(c => {
                if (oldUnit.spawnedThisTurn) {
@@ -202,7 +203,8 @@ export function resolveInstantCardPlay(
           // Actually, we should consume the Instinct HERE to be safe, or just before resolving effects.
           if (consumesInstinct) {
             const unitType = effect.params.unitType;
-            const isStray = ["tom", "alley_cat", "lion", "panther"].includes(unitType || "");
+            const targetStats = UNIT_DICTIONARY[unitType || ""];
+            const isStray = targetStats?.line === "stray";
             const instinctIndex = player.hand.findIndex(c => 
               isStray ? c.templateId === "stray_spirit" : c.templateId === "house_spirit"
             );
@@ -330,15 +332,11 @@ export function resolveInstantCardPlay(
           const line = effect.params.line;
           console.log(`[PhaseSystem] ${playerName} attempting ${line} Spirit evolution on ${u.type}`);
 
-          const houseStages = ["tabby", "siamese", "sphynx", "maine_coon", "calico"];
-          const strayStages = ["tom", "alley_cat", "lion", "panther"];
-
           const isValidSpiritEvolution = (c: import("@hex-strategy/shared").Card) => {
             const tType = c.effects.find(e => e.type === "molt_unit")?.params.unitType;
-            if (!tType) return false;
-            if (line === "house") return houseStages.includes(tType);
-            if (line === "stray") return strayStages.includes(tType);
-            return false;
+            const tStats = UNIT_DICTIONARY[tType || ""];
+            if (!tStats) return false;
+            return tStats.line === line;
           };
 
           // Spirit pulls a RANDOM valid Stage 2/3 card from deck (user requirement)
@@ -371,14 +369,15 @@ export function resolveInstantCardPlay(
         }
       }
       else if (effect.type === "random_evolution") {
-        const validTargets = Object.values(state.units).filter(u => 
-          u.owner === play.playerId && 
-          ["house_kitten", "stray_kitten", "tabby", "tom", "alley_cat"].includes(u.type)
-        );
+        const validTargets = Object.values(state.units).filter(u => {
+          const uStats = UNIT_DICTIONARY[u.type];
+          return u.owner === play.playerId && uStats && uStats.stage < 3;
+        });
         
         const isStage3 = (c: import("@hex-strategy/shared").Card) => {
-          const finalStages = ["lion", "panther", "maine_coon", "calico", "siamese", "sphynx"];
-          return finalStages.includes(c.templateId);
+          const tType = c.effects.find(e => e.type === "molt_unit")?.params.unitType;
+          const tStats = UNIT_DICTIONARY[tType || ""];
+          return tStats && tStats.stage === 3;
         };
 
         const handCards = player.hand.filter(isStage3);
@@ -447,11 +446,13 @@ export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayer
     if (u.owner !== nextPlayerId) {
       // Enemy debuffs (Sphynx)
       const stats = UNIT_DICTIONARY[u.type];
-      if (stats?.quirks?.some(q => q.id === "ancient_gaze")) {
+      const quirk = stats?.quirks?.find(q => q.id === "ancient_gaze");
+      if (quirk) {
         // Find allies of the current player near this enemy Sphynx
         for (const ally of Object.values(state.units).filter(al => al.owner === nextPlayerId)) {
           if (hexDistance(u.position, ally.position) <= 2) {
-            ally.modifiers.push({ source: "ancient_gaze", stat: "speed", amount: -2, duration: "end_of_turn" });
+            const penalty = quirk.value || -2;
+            ally.modifiers.push({ source: "ancient_gaze", stat: "speed", amount: penalty, duration: "end_of_turn" });
           }
         }
       }
@@ -463,8 +464,9 @@ export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayer
       if (q.trigger === "start_of_turn" && q.id === "territorial") {
         const enemies = Object.values(state.units).filter(en => en.owner !== u.owner && hexDistance(u.position, en.position) <= 2);
         if (enemies.length > 0) {
-          u.modifiers.push({ source: "territorial", stat: "movement", amount: 1, duration: "end_of_turn" });
-          console.log(`[PhaseSystem] ${u.type} triggered Territorial quirk, +1 movement`);
+          const bonus = q.value || 1;
+          u.modifiers.push({ source: "territorial", stat: "movement", amount: bonus, duration: "end_of_turn" });
+          console.log(`[PhaseSystem] ${u.type} triggered Territorial quirk, +${bonus} movement`);
         }
       }
     }
@@ -478,22 +480,28 @@ export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayer
     for (const b of Object.values(state.buildings)) {
       if (b.owner === nextPlayerId) {
         const bStats = BUILDING_DICTIONARY[b.type];
-        if (bStats?.quirks?.some(q => q.id === "auto_catniper")) {
-          player.catnip += 1;
-          console.log(`[PhaseSystem] Treat Dispenser generated +1 catnip for ${nextPlayerId}`);
+        const autoCatnipQuirk = bStats?.quirks?.find(q => q.id === "auto_catniper");
+        if (autoCatnipQuirk) {
+          const amount = autoCatnipQuirk.value || 1;
+          player.catnip += amount;
+          console.log(`[PhaseSystem] Treat Dispenser generated +${amount} catnip for ${nextPlayerId}`);
         }
-        if (bStats?.quirks?.some(q => q.id === "refreshing_sand")) {
+        const refreshSandQuirk = bStats?.quirks?.find(q => q.id === "refreshing_sand");
+        if (refreshSandQuirk) {
           for (const u of Object.values(state.units).filter(unit => unit.owner === nextPlayerId)) {
             if (hexDistance(b.position, u.position) <= 2) {
-              u.modifiers.push({ source: "refreshing_sand", stat: "movement", amount: 1, duration: "end_of_turn" });
+              const bonus = refreshSandQuirk.value || 1;
+              u.modifiers.push({ source: "refreshing_sand", stat: "movement", amount: bonus, duration: "end_of_turn" });
             }
           }
         }
-        if (bStats?.quirks?.some(q => q.id === "auto_groom")) {
+        const autoGroomQuirk = bStats?.quirks?.find(q => q.id === "auto_groom");
+        if (autoGroomQuirk) {
           for (const u of Object.values(state.units).filter(unit => unit.owner === nextPlayerId)) {
             if (hexDistance(b.position, u.position) <= 1) {
-              u.hp = Math.min(u.hp + 2, u.maxHp);
-              console.log(`[PhaseSystem] Auto Groomed ${u.type} (+2 hp)`);
+              const amount = autoGroomQuirk.value || 2;
+              u.hp = Math.min(u.hp + amount, u.maxHp);
+              console.log(`[PhaseSystem] Auto Groomed ${u.type} (+${amount} hp)`);
             }
           }
         }

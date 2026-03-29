@@ -1,16 +1,15 @@
 import { Card } from "./types";
+import { STAGE_1_UNIT_TEMPLATES, STAGE_1_BUILDING_TEMPLATES, STAGE_1_TRAP_TEMPLATES } from "./unitStats";
 
 // molt chains:
 //   house kitten → tabby → maine coon
-//
+//   house kitten → tabby → calico
+//   house kitten → siamese
+//   house kitten → sphynx
 //   stray kitten → tom → lion
 //   stray kitten → alley cat → panther
 
-// stage 1 units
-export const STAGE_1_UNIT_TEMPLATES = ["house_kitten", "stray_kitten"];
-// NOTE: "cat_tree" is NOT allowed in player decks as it is the base unit.
-export const STAGE_1_BUILDING_TEMPLATES = ["litter_box", "scratching_post", "treat_dispenser", "grooming_station"];
-export const STAGE_1_TRAP_TEMPLATES = ["yarn_ball", "cucumber"];
+// stage 1 units (now imported from unitStats)
 export const STARTER_TEMPLATES = [...STAGE_1_UNIT_TEMPLATES, ...STAGE_1_BUILDING_TEMPLATES, ...STAGE_1_TRAP_TEMPLATES];
 
 export interface DeckFormat {
@@ -41,12 +40,12 @@ export const DEFAULT_DECK = [
 
 // Ensure DEFAULT_DECK is 25 cards
 while (DEFAULT_DECK.length < 25) {
-  DEFAULT_DECK.push("purr"); 
+  DEFAULT_DECK.push("purr");
 }
 
 export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
 
-  // ────────────────────────── stage 1 troops (deployable) ──────────────────────────
+  //  stage 1 troops (deployable) 
 
   house_kitten: {
     templateId: "house_kitten",
@@ -67,7 +66,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "spawn_unit", params: { unitType: "stray_kitten" } }]
   },
 
-  // ────────────────────────── stage 2 molts ──────────────────────────
+  //  stage 2 molts 
 
   tabby: {
     templateId: "tabby",
@@ -78,6 +77,26 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     target: "tile",
     moltsFrom: "house_kitten",
     effects: [{ type: "molt_unit", params: { unitType: "tabby" } }]
+  },
+  siamese: {
+    templateId: "siamese",
+    name: "Siamese",
+    description: "very vocal and very mean. will scream at you if you look at her wrong.",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    moltsFrom: "house_kitten",
+    effects: [{ type: "molt_unit", params: { unitType: "siamese" } }]
+  },
+  sphynx: {
+    templateId: "sphynx",
+    name: "Sphynx",
+    description: "his name is larry and he knows what you did. ",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    moltsFrom: "house_kitten",
+    effects: [{ type: "molt_unit", params: { unitType: "sphynx" } }]
   },
   tom: {
     templateId: "tom",
@@ -101,6 +120,32 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
   },
 
 
+
+
+  //  stage 3 molts 
+
+  maine_coon: {
+    templateId: "maine_coon",
+    name: "Maine Coon",
+    description: "absolute unit. does not care for fighting, would rather nap",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    moltsFrom: "tabby",
+    effects: [{ type: "molt_unit", params: { unitType: "maine_coon" } }]
+  },
+
+
+  calico: {
+    templateId: "calico",
+    name: "Calico",
+    description: "Vibrant and unpredictable.",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    moltsFrom: "tabby",
+    effects: [{ type: "molt_unit", params: { unitType: "calico" } }]
+  },
   panther: {
     templateId: "panther",
     name: "Panther",
@@ -122,51 +167,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "molt_unit", params: { unitType: "lion" } }]
   },
 
-  // ────────────────────────── stage 3 molts ──────────────────────────
-
-  maine_coon: {
-    templateId: "maine_coon",
-    name: "Maine Coon",
-    description: "absolute unit. does not care for fighting, would rather nap",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "tabby",
-    effects: [{ type: "molt_unit", params: { unitType: "maine_coon" } }]
-  },
-
-  siamese: {
-    templateId: "siamese",
-    name: "Siamese",
-    description: "very vocal and very mean. will scream at you if you look at her wrong.",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "house_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "siamese" } }]
-  },
-  sphynx: {
-    templateId: "sphynx",
-    name: "Sphynx",
-    description: "his name is larry and he knows what you did. ",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "house_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "sphynx" } }]
-  },
-  calico: {
-    templateId: "calico",
-    name: "Calico",
-    description: "Vibrant and unpredictable.",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "tabby",
-    effects: [{ type: "molt_unit", params: { unitType: "calico" } }]
-  },
-
-  // ────────────────────────── buildings ──────────────────────────
+  //  buildings 
 
   scratching_post: {
     templateId: "scratching_post",
@@ -205,7 +206,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "spawn_building", params: { buildingType: "grooming_station" } }]
   },
 
-  // ────────────────────────── traps ──────────────────────────
+  //  traps 
 
   yarn_ball: {
     templateId: "yarn_ball",
@@ -226,9 +227,9 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "spawn_trap", params: { trapType: "cucumber" } }]
   },
 
-  // ────────────────────────── specialized instincts ──────────────────────────
+  //   instinct cards (spells) 
 
-  // ────────────────────────── rare candy instincts ──────────────────────────
+  //  molt instincts 
 
   fresh_spark: {
     templateId: "fresh_spark",
@@ -242,7 +243,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
   stray_spirit: {
     templateId: "stray_spirit",
     name: "Stray Spirit",
-    description: "Scans your deck and molts a Stray line unit.",
+    description: "Scans your deck and pulls a random Stray line card and plays it on your kitten to molt it.",
     type: "instinct",
     cost: 3,
     target: "unit",
@@ -251,7 +252,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
   house_spirit: {
     templateId: "house_spirit",
     name: "House Spirit",
-    description: "Scans your deck and pulls a random House line evolution.",
+    description: "Scans your deck and pulls a random House line card and plays it on your kitten to molt it.",
     type: "instinct",
     cost: 3,
     target: "unit",
@@ -268,23 +269,22 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "random_evolution", params: {} }]
   },
 
-  // ────────────────────────── spells ──────────────────────────
-
+  //   other instincts
   catnip_mist: {
     templateId: "catnip_mist",
     name: "Catnip Mist",
     description: "Buffs nearby units' speed and movement.",
-    type: "instinct", // spellcards are instincts
-    cost: 3,
+    type: "instinct",
+    cost: 2,
     target: "tile",
-    effects: [{ type: "area_buff", params: { radius: 2, speed: 2, movement: 1, duration: 1 } }]
+    effects: [{ type: "area_buff", params: { radius: 2, speed: 10, movement: 1, duration: 1 } }]
   },
   laser_pointer: {
     templateId: "laser_pointer",
     name: "Laser Pointer",
     description: "Lures enemies towards a tile.",
     type: "instinct",
-    cost: 2,
+    cost: 1,
     target: "tile",
     effects: [{ type: "lure_unit", params: { radius: 5 } }]
   },
@@ -293,7 +293,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     name: "Cardboard Box",
     description: "Unit hides in a box. Absorbs 1 hit, or collapses at end of turn.",
     type: "instinct",
-    cost: 2,
+    cost: 1,
     target: "unit",
     effects: [{ type: "shield", params: {} }]
   },
@@ -301,11 +301,11 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
   purr: {
     templateId: "purr",
     name: "Purr",
-    description: "Heals a unit for 5 HP.",
+    description: "Heals a unit for 50 HP.",
     type: "instinct",
     cost: 1,
     target: "unit",
-    effects: [{ type: "heal", params: { amount: 5 } }]
+    effects: [{ type: "heal", params: { amount: 50 } }]
   },
   hiss: {
     templateId: "hiss",
@@ -320,29 +320,29 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
 
 export function validateDeck(deck: string[], format: DeckFormat = STANDARD_FORMAT): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
+
   if (deck.length !== format.deckSize) {
     errors.push(`Deck must have exactly ${format.deckSize} cards (current: ${deck.length}).`);
   }
-  
+
   const counts: Record<string, number> = {};
   let stage1Count = 0;
-  
+
   for (const id of deck) {
     counts[id] = (counts[id] || 0) + 1;
     if (counts[id] > format.maxCopies) {
       const name = CARD_LIBRARY[id]?.name || id;
       errors.push(`Maximum ${format.maxCopies} copies of '${name}' allowed.`);
     }
-    
+
     if (STAGE_1_UNIT_TEMPLATES.includes(id) || STAGE_1_BUILDING_TEMPLATES.includes(id)) {
       stage1Count++;
     }
   }
-  
+
   if (format.requireStage1 && stage1Count === 0) {
     errors.push("Deck must have at least one Stage 1 unit or building for a valid turn 1 play.");
   }
-  
+
   return { valid: errors.length === 0, errors };
 }

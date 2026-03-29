@@ -24,7 +24,6 @@
     selectedCardIdStore
   } from './game/gameClient';
 
-  let isMouseOverMap = false;
 
   import { decksStore, selectedDeckNameStore } from './game/deckStore';
   import { validateDeck } from '@hex-strategy/shared';
@@ -67,6 +66,12 @@
       showJoinPrivate = true;
     }
   });
+
+  import { selectedUnitIdStore } from './game/gameClient';
+  function deselectAll() {
+    $selectedCardIdStore = null;
+    $selectedUnitIdStore = null;
+  }
 </script>
 
 <main class="app-container">
@@ -173,25 +178,25 @@
 
   {:else if view === 'game'}
     {#if $gameStateStore}
-      <div class="game-ui">
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div class="game-ui" on:click={deselectAll}>
         {#if $isSpectatorStore}
           <div class="spectator-badge">👁️ SPECTATOR MODE</div>
         {/if}
         <div class="info-layer">
-          <UnitInfo mapHovered={isMouseOverMap} />
+          <UnitInfo />
         </div>
         <div 
           class="map-layer"
-          role="presentation"
-          on:mouseenter={() => isMouseOverMap = true}
-          on:mouseleave={() => isMouseOverMap = false}
+          on:click|stopPropagation
         >
           <MapView />
         </div>
-        <div class="hand-layer">
+        <div class="hand-layer" on:click|stopPropagation>
           <CardHand />
         </div>
-        <div class="sidebar-layer">
+        <div class="sidebar-layer" on:click|stopPropagation>
           <GameSidebar {showLog} toggleLog={() => showLog = !showLog} />
         </div>
       </div>
@@ -211,17 +216,26 @@
     --text-muted: #94a3b8;
     --btn-radius: 12px;
     --input-radius: 50px;
+    --font-main: 'BitcountPropSingle', sans-serif;
+  }
+
+  @font-face {
+    font-family: 'BitcountPropSingle';
+    src: url('./assets/fonts/BitcountPropSingle-VariableFont_CRSV,ELSH,ELXP,slnt,wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
   }
 
   .app-container {
     width: 100vw;
     height: 100vh;
-    font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+    font-family: var(--font-main);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     background: var(--bg-dark);
     color: var(--text-main);
+    line-height: 1.2;
   }
 
   .menu {
@@ -589,12 +603,19 @@
   /* Default (Portrait) */
   @media (orientation: portrait) {
     .game-ui {
-      grid-template-rows: 1fr auto;
+      grid-template-rows: 1fr;
       grid-template-columns: 100%;
     }
-    .map-layer { grid-row: 1; grid-column: 1; }
-    .hand-layer { grid-row: 2; grid-column: 1; }
-    .info-layer { grid-row: 1 / 3; grid-column: 1; z-index: 5000; pointer-events: none; }
+    .map-layer { grid-row: 1; grid-column: 1; min-height: 0; }
+    .hand-layer { 
+      grid-row: 1; grid-column: 1; 
+      z-index: 1000; 
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+    .info-layer { grid-row: 1; grid-column: 1; z-index: 5000; pointer-events: none; }
     .sidebar-layer { grid-row: 1; grid-column: 1; z-index: 500; pointer-events: none; }
   }
 
@@ -602,12 +623,19 @@
   @media (orientation: landscape) {
     .game-ui {
       grid-template-columns: 1fr 320px;
-      grid-template-rows: 1fr auto;
+      grid-template-rows: 1fr;
     }
-    .map-layer { grid-row: 1; grid-column: 1; }
-    .hand-layer { grid-row: 2; grid-column: 1; }
-    .sidebar-layer { grid-row: 1 / 3; grid-column: 2; }
-    .info-layer { grid-row: 1 / 3; grid-column: 1; z-index: 5000; pointer-events: none; }
+    .map-layer { grid-row: 1; grid-column: 1; min-height: 0; }
+    .hand-layer { 
+      grid-row: 1; grid-column: 1; 
+      z-index: 1000; 
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: none; 
+    }
+    .sidebar-layer { grid-row: 1; grid-column: 2; }
+    .info-layer { grid-row: 1; grid-column: 1; z-index: 5000; pointer-events: none; }
   }
 
   .map-layer, .hand-layer, .info-layer, .sidebar-layer {

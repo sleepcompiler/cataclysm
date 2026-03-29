@@ -15,6 +15,7 @@
     combatLogStore,
     selectedUnitIdStore,
     damagePopupsStore,
+    dragDropStore,
   } from "../game/gameClient";
 
   let canvas: HTMLCanvasElement;
@@ -24,13 +25,21 @@
   // which of your own units is currently selected for movement
   let selectedUnitId: string | null = null;
   let rendererReady = false;
+  let isPortrait = false;
 
   onMount(() => {
+    const updateOrientation = () => {
+      isPortrait = window.innerHeight > window.innerWidth;
+    };
+    window.addEventListener('resize', updateOrientation);
+    updateOrientation();
+
     renderer = new GameRenderer(canvas);
     rendererReady = true;
     const loop = () => {
       if ($gameStateStore && $playerIdStore) {
         renderer.setState($gameStateStore, $playerIdStore);
+        renderer.setOrientation(isPortrait);
 
         const selectedCard = $selectedCardIdStore
           ? (($projectedHandStore ?? []).find(
@@ -38,32 +47,98 @@
             ) ?? null)
           : null;
         renderer.setSelectedCard(selectedCard);
+
+        // If dragging, let renderer know intended target for preview
+        if ($dragDropStore.isDragging) {
+           const hex = getHexAt($dragDropStore.x, $dragDropStore.y);
+           if (hex) renderer.setHoverTile(hex);
+        } else {
+           renderer.setHoverTile(null);
+        }
+
         renderer.setSelectedUnit(selectedUnitId);
         renderer.render();
 
         // Scale overlay to match canvas stretching
         if (overlayEl && canvas) {
           const rect = canvas.getBoundingClientRect();
-          overlayEl.style.transform = `scale(${rect.width / 1200}, ${rect.height / 800})`;
+          const baseW = isPortrait ? 800 : 1200;
+          const baseH = isPortrait ? 1200 : 800;
+          overlayEl.style.transform = `scale(${rect.width / baseW}, ${rect.height / baseH})`;
         }
       }
       requestAnimationFrame(loop);
     };
     loop();
+
+    const onDrop = (e: any) => {
+      const { cardId, x, y } = e.detail;
+      const hex = getHexAt(x, y);
+      if (hex) {
+        // We temporarily select the card to use the existing play logic or call a helper
+        $selectedCardIdStore = cardId;
+        // The click handler expects a native event or we can just call a refactored playCard(card, hex)
+        // For now, let's trigger a fake click logic
+        attemptPlayCard(cardId, hex);
+      }
+    };
+    window.addEventListener('card-dropped', onDrop);
+    return () => {
+      window.removeEventListener('card-dropped', onDrop);
+      window.removeEventListener('resize', updateOrientation);
+    };
   });
+
+  function getHexAt(screenX: number, screenY: number) {
+    if (!canvas || !renderer) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    let x = (screenX - rect.left) * scaleX;
+    let y = (screenY - rect.top) * scaleY;
+    
+    if (isPortrait) {
+       const x1 = x - 400;
+       const y1 = y - 600;
+       const x2 = y1;
+       const y2 = -x1;
+       x = 600 + x2;
+       y = 400 + y2;
+    }
+    
+    return (renderer as any).grid.pixelToHex(x, y);
+  }
+
+  function attemptPlayCard(cardId: string, hex: {q: number, r: number}) {
+    if (!$gameStateStore || !$playerIdStore) return;
+    const playerStates = $gameStateStore.players[$playerIdStore];
+    const card = playerStates?.hand.find(c => c.id === cardId);
+    if (!card) return;
+
+    // Reuse validation/send logic from click handler...
+    // To avoid duplication, we could extract handleCanvasClick's core
+    // but here we just send if catnip is enough for simplicity
+    if ($projectedCatnipStore >= card.cost) {
+        let finalTarget: any = hex;
+        if (card.target === "unit") {
+           const unitAtHex = Object.values($gameStateStore.units).find(u => u.position.q === hex.q && u.position.r === hex.r);
+           if (unitAtHex) finalTarget = unitAtHex.id;
+           else return; // Bail if target unit not found
+        }
+        sendCommand({ type: "play_card", cardId, target: finalTarget });
+        $projectedCatnipStore -= card.cost;
+        projectedHandStore.update(h => h.filter(c => c.id !== cardId));
+    }
+    $selectedCardIdStore = null;
+  }
 
   function handleCanvasClick(e: MouseEvent) {
     if (!renderer) return;
 
     // We allow clicks for inspection, but actions require $isMyTurnStore
     const isMyTurn = $isMyTurnStore;
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    const hex = (renderer as any).grid.pixelToHex(x, y);
+    const hex = getHexAt(e.clientX, e.clientY);
+    if (!hex) return;
 
     renderer.setSelectedTile(hex);
 
@@ -266,13 +341,17 @@
     <div class="game-container">
       <canvas
         bind:this={canvas}
-        width="1200"
-        height="800"
+        width={isPortrait ? 800 : 1200}
+        height={isPortrait ? 1200 : 800}
         on:click={handleCanvasClick}
       ></canvas>
 
       <!-- DOM OVERLAYS FROM CANVAS (PIXEL-POSITIONED) -->
-      <div class="ui-overlay-layer" bind:this={overlayEl}>
+      <div 
+        class="ui-overlay-layer" 
+        bind:this={overlayEl}
+        style="width: {isPortrait ? 800 : 1200}px; height: {isPortrait ? 1200 : 800}px;"
+      >
         {#if $gameStateStore && rendererReady}
           <!-- Mini Health Bars & Status Icons -->
           {#each Object.values($gameStateStore.units) as unit (unit.id)}
@@ -403,6 +482,7 @@
   /* Portrait overrides for canvas behavior */
   @media (orientation: portrait) {
     .game-container {
+      aspect-ratio: 2 / 3;
       max-height: unset;
       max-width: 100%;
     }
@@ -412,8 +492,6 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 1200px;
-    height: 800px;
     transform-origin: top left;
     pointer-events: none;
   }

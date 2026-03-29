@@ -16,6 +16,7 @@
   export let selectedUnitId: string | null = null;
 
   let logEl: HTMLElement;
+  let isCollapsed = false;
 
   function handleEndTurn() {
     if (!$hasEndedTurnStore && $isMyTurnStore) {
@@ -58,12 +59,20 @@
       {/if}
     </div>
     
-    <!-- mobile log toggle -->
-    <button class="log-toggle" on:click={toggleLog}>
-      {showLog ? "Back" : "📜 Log"}
-    </button>
+    <div class="banner-controls">
+      <!-- mobile log toggle -->
+      <button class="log-toggle" on:click={toggleLog}>
+        {showLog ? "Back" : "📜 Log"}
+      </button>
+      
+      <!-- mobile collapse toggle -->
+      <button class="collapse-toggle mobile-only" on:click={() => isCollapsed = !isCollapsed}>
+        {isCollapsed ? "▼ Exp" : "▲ Col"}
+      </button>
+    </div>
   </div>
 
+  {#if !isCollapsed}
   {#if $privateCodeStore}
     <div class="match-code-badge">
       <span class="label">Code:</span>
@@ -124,6 +133,7 @@
       {/if}
     </button>
   </div>
+  {/if}
 </div>
 
 <style>
@@ -150,19 +160,26 @@
     }
   }
 
-  .log-toggle {
+  .banner-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .log-toggle, .collapse-toggle {
     display: none;
-    padding: 6px 12px;
+    padding: 6px 10px;
     background: #333;
     color: white;
     border: 1px solid #555;
     border-radius: 8px;
     font-size: 13px;
     font-weight: bold;
+    cursor: pointer;
   }
 
   @media (orientation: portrait) {
-    .log-toggle { display: block; }
+    .log-toggle, .collapse-toggle.mobile-only { display: block; }
   }
 
   .turn-banner {

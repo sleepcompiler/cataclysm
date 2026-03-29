@@ -70,9 +70,10 @@ export function resolveActiveQuirk(
     );
 
     if (targetUnit) {
-      targetUnit.hp = Math.min(targetUnit.hp + 5, targetUnit.maxHp);
+      const healAmount = quirk.value || 0;
+      targetUnit.hp = Math.min(targetUnit.hp + healAmount, targetUnit.maxHp);
       building.uses -= 1;
-      console.log(`[QuirkSystem] Deep Cleaned ${targetUnit.type}. Uses left: ${building.uses}`);
+      console.log(`[QuirkSystem] Deep Cleaned ${targetUnit.type} for ${healAmount}. Uses left: ${building.uses}`);
       
       if (building.uses <= 0) {
         console.log(`[QuirkSystem] Grooming Station broke after final use.`);

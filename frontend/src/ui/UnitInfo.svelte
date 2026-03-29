@@ -5,7 +5,6 @@
   import { tweened } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
 
-  export let mapHovered = false;
 
   const selectedUnit = derived(
     [gameStateStore, selectedUnitIdStore, selectedCardIdStore, projectedHandStore],
@@ -28,6 +27,7 @@
             isBuilding: false,
             isTrap: false,
             quirks: stats?.quirks || [],
+            range: stats?.range || 1,
             atkMod,
             spdMod,
             movMod,
@@ -51,7 +51,8 @@
             modifiers: b.modifiers || [],
             atkMod: 0,
             spdMod: 0,
-            movMod: 0
+            movMod: 0,
+            range: stats?.range || 0
           };
         }
         if ($state.traps && $state.traps[$uid]) {
@@ -99,6 +100,7 @@
                   attack: stats.attack,
                   speed: stats.speed,
                   movement: stats.movement,
+                  range: stats.range || 1,
                   isCardPreview: true,
                   isBuilding: false,
                   isTrap: false,
@@ -124,6 +126,7 @@
                   attack: 0,
                   speed: stats.speed,
                   movement: 0,
+                  range: stats.range || 0,
                   isCardPreview: true,
                   isBuilding: true,
                   isTrap: false,
@@ -214,6 +217,9 @@
     $selectedCardIdStore = null;
     $selectedUnitIdStore = null;
   }
+
+  let isCollapsed = false;
+  let isPinned = true; // Pin determines if it should ignore auto-hide/hiding-mode
 </script>
 
 {#if $selectedUnit}
@@ -221,15 +227,31 @@
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div 
     class="unit-info" 
-    class:targeting-hidden={mapHovered && !!$selectedCardIdStore}
+    class:targeting-hidden={!isPinned && !!$selectedCardIdStore}
+    class:collapsed={isCollapsed}
     on:click={handleDismiss}
   >
     <div class="header">
-      <h3>{$selectedUnit.name}</h3>
+      <div class="title-group">
+        <button class="collapse-toggle" on:click|stopPropagation={() => isCollapsed = !isCollapsed}>
+          {isCollapsed ? '▶' : '▼'}
+        </button>
+        <button 
+          class="pin-toggle" 
+          class:active={isPinned} 
+          on:click|stopPropagation={() => isPinned = !isPinned} 
+          title={isPinned ? 'Unpin (Hide on target)' : 'Pin (Always visible)'}
+        >
+          {isPinned ? '📌' : '📍'}
+        </button>
+        <h3>{$selectedUnit.name}</h3>
+      </div>
       <div class="owner" class:mine={$selectedUnit.owner === $playerIdStore}>
         {$selectedUnit.isCardPreview ? 'Preview' : ($gameStateStore?.players[$selectedUnit.owner]?.name ?? 'Unknown')}
       </div>
     </div>
+
+    {#if !isCollapsed}
 
     <div class="stats-grid">
       <div class="stat">
@@ -274,6 +296,11 @@
             </span>
           {/if}
         </span>
+      </div>
+
+      <div class="stat" class:hidden={$selectedUnit.isTrap || (!$selectedUnit.isBuilding && ($selectedUnit.attack === 0 || ($selectedUnit.range ?? 0) === 0))}>
+        <span class="label">RANGE</span>
+        <span class="value">{($selectedUnit.range ?? 0) > 1 ? $selectedUnit.range : 'Melee'}</span>
       </div>
 
       {#if $selectedUnit.isCardPreview && $selectedUnit.cost !== undefined}
@@ -352,6 +379,7 @@
         </div>
       </div>
     {/if}
+    {/if}
   </div>
 {/if}
 
@@ -373,6 +401,10 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  .unit-info.collapsed {
+    padding-bottom: 12px;
+  }
+
   .unit-info.targeting-hidden {
     opacity: 0;
     pointer-events: none;
@@ -391,14 +423,17 @@
       border-radius: 24px 24px 0 0;
       border: none;
       border-top: 3px solid #ff6090; /* Accent color on top border */
-      padding: 20px;
+      padding: 12px 14px;
       box-shadow: 0 -20px 50px rgba(0,0,0,0.5);
     }
     
     .header h3 { font-size: 1.2rem !important; }
     .description { font-size: 0.8rem !important; }
-    .stats-grid { flex-direction: row !important; flex-wrap: wrap; gap: 15px !important; }
-    .stat { flex: 1; min-width: 80px; }
+    .stats-grid { flex-direction: row !important; flex-wrap: wrap; gap: 10px 8px !important; }
+    .stat { flex: 1; min-width: 65px; margin-bottom: 4px; }
+    .stat .label { width: auto; font-size: 0.7rem; }
+    .stat .value { font-size: 0.85rem; }
+    h4 { font-size: 0.9rem; }
   }
 
   h3 {
@@ -412,6 +447,60 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .unit-info.collapsed .header {
+    margin-bottom: 0;
+  }
+
+  .title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .collapse-toggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--accent-pink);
+    cursor: pointer;
+    font-size: 0.8rem;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+
+  .collapse-toggle:hover {
+    transform: scale(1.2);
+  }
+
+  .pin-toggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: grayscale(1);
+    opacity: 0.5;
+    transition: all 0.2s;
+  }
+  .pin-toggle.active {
+    filter: grayscale(0);
+    opacity: 1;
+  }
+  .pin-toggle:hover {
+    transform: scale(1.2);
   }
 
   .owner {
@@ -452,6 +541,8 @@
   .value {
     font-weight: bold;
     color: #444;
+    margin-left: auto;
+    text-align: right;
   }
 
   .hp-bar-bg {

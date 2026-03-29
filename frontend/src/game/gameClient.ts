@@ -38,6 +38,15 @@ export const projectedCatnipStore = writable<number>(0);
 export const projectedHandStore = writable<import("@hex-strategy/shared").Card[]>([]);
 export const hasEndedTurnStore = writable<boolean>(false);
 
+// Drag to Play State
+export interface DragDropState {
+  cardId: string | null;
+  x: number;
+  y: number;
+  isDragging: boolean;
+}
+export const dragDropStore = writable<DragDropState>({ cardId: null, x: 0, y: 0, isDragging: false });
+
 // ── Lobby State ───────────────────────────────────────────────────────────────
 export type LobbyStatus = "idle" | "queued" | "in_private" | "in_match";
 export const lobbyStatusStore = writable<LobbyStatus>("idle");

@@ -27,6 +27,8 @@ export class GameRenderer {
   private selectedUnitId: string | null = null;
   // tiles the selected unit can actually walk to this turn
   private movementRange: Set<string> = new Set();
+  private hoverTile: TileId | null = null;
+  private isPortrait: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -40,6 +42,10 @@ export class GameRenderer {
   public setState(state: GameState, playerId: string) {
     this.state = state;
     this.myPlayerId = playerId;
+  }
+
+  public setOrientation(isPortrait: boolean) {
+    this.isPortrait = isPortrait;
   }
 
   public setActionQueue(queue: any[]) {
@@ -129,16 +135,35 @@ export class GameRenderer {
   }
 
   public hexToPixel(q: number, r: number) {
-    return this.grid.hexToPixel(q, r);
+    const p = this.grid.hexToPixel(q, r);
+    if (this.isPortrait) {
+      const x1 = p.x - 600;
+      const y1 = p.y - 400;
+      const x2 = -y1;
+      const y2 = x1;
+      return { x: 400 + x2, y: 600 + y2 };
+    }
+    return p;
   }
 
   public setSelectedTile(tile: Readonly<TileId> | null) {
     this.selectedTile = tile ? { q: tile.q, r: tile.r } : null;
   }
 
+  public setHoverTile(tile: Readonly<TileId> | null) {
+    this.hoverTile = tile ? { q: tile.q, r: tile.r } : null;
+  }
+
   public render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!this.state) return;
+
+    this.ctx.save();
+    if (this.isPortrait) {
+      this.ctx.translate(400, 600);
+      this.ctx.rotate(Math.PI / 2);
+      this.ctx.translate(-600, -400);
+    }
 
     const isSpawnCard = this.selectedCard?.effects.some(
       e => e.type === "spawn_unit" || e.type === "spawn_building"
@@ -245,6 +270,11 @@ export class GameRenderer {
       this.drawHex(this.selectedTile.q, this.selectedTile.r, "yellow", 3);
     }
 
+    // hover tile outline (for drag/targeting)
+    if (this.hoverTile) {
+      this.drawHex(this.hoverTile.q, this.hoverTile.r, "white", 2);
+    }
+
     // pending actions dashes
     this.ctx.setLineDash([5, 5]);
     for (const action of this.actionQueue) {
@@ -253,6 +283,8 @@ export class GameRenderer {
       }
     }
     this.ctx.setLineDash([]);
+    
+    this.ctx.restore();
   }
 
   private drawHex(q: number, r: number, color: string, lineWidth: number = 1) {
