@@ -407,6 +407,14 @@
                       : '#4caf50'}"
                 ></div>
               </div>
+              {#if b.attachment && b.attachment.hp > 0}
+                <div class="mini-hp-bar" style="margin-top: 2px;">
+                  <div
+                    class="fill"
+                    style="width: {(b.attachment.hp / b.attachment.maxHp) * 100}%; background: #a0a0a0;"
+                  ></div>
+                </div>
+              {/if}
             </div>
           {/each}
 

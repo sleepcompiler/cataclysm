@@ -10,6 +10,7 @@ interface AttackIntent {
   target: Unit | Building;
   targetIsBuilding: boolean;
   speed: number;
+  overrideDamage?: number;
 }
 
 function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
@@ -65,43 +66,50 @@ function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
 }
 
 // find the first enemy unit or building adjacent to an attacker
-function findTarget(
+function findTargets(
   attacker: Unit | Building,
   allUnits: Unit[],
   allBuildings: Building[],
   ownerId: string,
-  range: number
-): { target: Unit | Building, isBuilding: boolean } | null {
+  range: number,
+  maxTargets: number
+): { target: Unit | Building, isBuilding: boolean }[] {
   const attackerPos = (attacker as any).position;
+  const targets: { target: Unit | Building, isBuilding: boolean }[] = [];
 
   // 1. Check for TAUNT (Scratch Posts) within range 2 of the attacker
-  // if any Scratch Post is within range 1, it's the mandatory target.
   for (const b of allBuildings) {
     if (b.owner === ownerId) continue;
     if (b.hp <= 0) continue;
     if (b.type === "scratching_post" && hexDistance(attackerPos, b.position) <= 2) {
-      // If we can reach it (range 1), we MUST attack it.
       if (hexDistance(attackerPos, b.position) <= range) {
-        return { target: b, isBuilding: true };
+        targets.push({ target: b, isBuilding: true });
+        if (targets.length >= maxTargets) return targets;
       }
     }
   }
 
   for (const u of allUnits) {
     if (u.owner === ownerId) continue;
-    if (u.hp <= 0) continue; // already dead
+    if (u.hp <= 0) continue;
     if (hexDistance(attackerPos, u.position) <= range) {
-      return { target: u, isBuilding: false };
+      if (!targets.some(t => t.target.id === u.id)) {
+        targets.push({ target: u, isBuilding: false });
+        if (targets.length >= maxTargets) return targets;
+      }
     }
   }
   for (const b of allBuildings) {
     if (b.owner === ownerId) continue;
     if (b.hp <= 0) continue;
     if (hexDistance(attackerPos, b.position) <= range) {
-      return { target: b, isBuilding: true };
+      if (!targets.some(t => t.target.id === b.id)) {
+        targets.push({ target: b, isBuilding: true });
+        if (targets.length >= maxTargets) return targets;
+      }
     }
   }
-  return null;
+  return targets;
 }
 
 export function processAttacks(state: GameState) {
@@ -125,13 +133,13 @@ export function processDamageAndDeath(state: GameState): {
   for (const u of allUnits) {
     if (u.hasAttackedThisTurn || u.hp <= 0) continue;
     const stats = getEffectiveStats(u, false);
-    const found = findTarget(u, allUnits, allBuildings, u.owner, stats.range);
-    if (found) {
+    const foundList = findTargets(u, allUnits, allBuildings, u.owner, stats.range, 1);
+    if (foundList.length > 0) {
       intents.push({
         attacker: u,
         attackerIsBuilding: false,
-        target: found.target,
-        targetIsBuilding: found.isBuilding,
+        target: foundList[0].target,
+        targetIsBuilding: foundList[0].isBuilding,
         speed: stats.speed,
       });
     }
@@ -140,18 +148,66 @@ export function processDamageAndDeath(state: GameState): {
   for (const b of allBuildings) {
     if (b.hp <= 0) continue;
     const stats = getEffectiveStats(b, true);
-    if (stats.attack === 0 || stats.range === 0) continue;
+    let maxTargets = 1;
+    const bStats = BUILDING_DICTIONARY[b.type];
+    const mtQuirk = bStats?.quirks?.find(q => q.id === "multi_target");
+    if (mtQuirk && mtQuirk.value) {
+      maxTargets = mtQuirk.value;
+    }
 
-    // buildings target any enemy in range
-    const found = findTarget(b, allUnits, allBuildings, b.owner, stats.range);
-    if (found) {
-      intents.push({
-        attacker: b,
-        attackerIsBuilding: true,
-        target: found.target,
-        targetIsBuilding: found.isBuilding,
-        speed: stats.speed,
-      });
+    if (stats.attack > 0 && stats.range > 0) {
+      const foundList = findTargets(b, allUnits, allBuildings, b.owner, stats.range, maxTargets);
+      for (const found of foundList) {
+        intents.push({
+          attacker: b,
+          attackerIsBuilding: true,
+          target: found.target,
+          targetIsBuilding: found.isBuilding,
+          speed: stats.speed,
+        });
+      }
+    }
+
+    // Attachment attacks IN ADDITION to normal attacks
+    if (b.attachment && b.attachment.hp > 0) {
+      if (b.attachment.type === "wizard") {
+        const allTargets = findTargets(b, allUnits, allBuildings, b.owner, 2, 999);
+        for (const t of allTargets) {
+          intents.push({
+             attacker: b,
+             attackerIsBuilding: true,
+             target: t.target,
+             targetIsBuilding: t.isBuilding,
+             speed: stats.speed,
+             overrideDamage: 100
+          });
+        }
+      } else {
+        let attAtk = 0;
+        let attRange = 0;
+        
+        if (b.attachment.type === "cannon") {
+          attAtk = 200;
+          attRange = 2;
+        } else if (b.attachment.type === "catapult") {
+          attAtk = 150;
+          attRange = 4;
+        }
+        
+        if (attAtk > 0) {
+          const attTarget = findTargets(b, allUnits, allBuildings, b.owner, attRange, 1);
+          if (attTarget.length > 0) {
+            intents.push({
+               attacker: b,
+               attackerIsBuilding: true,
+               target: attTarget[0].target,
+               targetIsBuilding: attTarget[0].isBuilding,
+               speed: stats.speed,
+               overrideDamage: attAtk
+            });
+          }
+        }
+      }
     }
   }
 
@@ -169,7 +225,7 @@ export function processDamageAndDeath(state: GameState): {
     if (attackerHp <= 0) continue;
     if (target.hp <= 0) continue;
 
-    let dmg = getEffectiveStats(attacker, attackerIsBuilding).attack;
+    let dmg = intent.overrideDamage !== undefined ? intent.overrideDamage : getEffectiveStats(attacker, attackerIsBuilding).attack;
     const attackerOwner = attacker.owner;
     const targetOwner = target.owner;
 
@@ -216,6 +272,33 @@ export function processDamageAndDeath(state: GameState): {
     }
 
     // deal damage immediately
+    let tHp = target.hp;
+    if (targetIsBuilding) {
+       let tB = target as Building;
+       if (tB.attachment && tB.attachment.hp > 0) {
+          if (tB.attachment.isShield) {
+             if (tB.attachment.hp >= dmg) {
+                tB.attachment.hp -= dmg;
+                dmg = 0;
+                console.log(`[combat] Attachment absorbed damage. Remaining attachment HP: ${tB.attachment.hp}`);
+             } else {
+                dmg -= tB.attachment.hp;
+                console.log(`[combat] Attachment absorbed ${tB.attachment.hp} damage and broke!`);
+                tB.attachment.hp = 0;
+                tB.attachment = undefined;
+             }
+          } else {
+             // Not a shield: durability depletes as tower takes damage, but dmg still goes to tower
+             tB.attachment.hp -= dmg;
+             if (tB.attachment.hp <= 0) {
+                console.log(`[combat] Attachment durability depleted and it broke!`);
+                tB.attachment.hp = 0;
+                tB.attachment = undefined;
+             }
+          }
+       }
+    }
+    
     target.hp -= dmg;
 
     // Mirror quirk (Siamese)

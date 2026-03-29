@@ -33,9 +33,9 @@ export const DEFAULT_DECK = [
   "stray_kitten", "stray_kitten", "stray_kitten",
   "tabby", "tabby", "tom", "tom", "alley_cat", "alley_cat",
   "panther", "lion", "siamese", "sphynx", "calico",
-  "fresh_spark", "stray_spirit", "house_spirit", "random_evolution",
-  "litter_box", "treat_dispenser", "scratching_post",
-  "cardboard_box"
+  "fresh_spark", "random_evolution",
+  "cat_tree_cannon", "cat_tree_wizard", "cat_tree_catapult",
+  "scratching_post", "cardboard_box"
 ];
 
 // Ensure DEFAULT_DECK is 25 cards
@@ -315,6 +315,33 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     cost: 3,
     target: "unit",
     effects: [{ type: "push", params: { distance: 1 } }]
+  },
+  cat_tree_cannon: {
+    templateId: "cat_tree_cannon",
+    name: "Cat Tree Cannon",
+    description: "Adds a cannon attachment. Range 2, 200 damage to one unit. Acts as a 500 HP shield for the tree.",
+    type: "instinct",
+    cost: 5,
+    target: "building",
+    effects: [{ type: "equip_attachment", params: { attachmentType: "cannon", hp: 500, isShield: true } }]
+  },
+  cat_tree_wizard: {
+    templateId: "cat_tree_wizard",
+    name: "Cat Wizard",
+    description: "Summons a Cat Wizard attachment. Zaps all enemies in range for 100 dmg each turn, and instantly heals the tree for 500 HP when played. Leaves after taking 800 damage.",
+    type: "instinct",
+    cost: 5,
+    target: "building",
+    effects: [{ type: "equip_attachment", params: { attachmentType: "wizard", hp: 800, isShield: false } }]
+  },
+  cat_tree_catapult: {
+    templateId: "cat_tree_catapult",
+    name: "Catapult",
+    description: "Adds a catapult attachment. Range 4, 150 damage to a single unit. Acts as a 200 HP shield.",
+    type: "instinct",
+    cost: 4,
+    target: "building",
+    effects: [{ type: "equip_attachment", params: { attachmentType: "catapult", hp: 200, isShield: true } }]
   },
 };
 

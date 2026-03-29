@@ -172,9 +172,12 @@ export const BUILDING_DICTIONARY: Record<string, BuildingStats> = {
     name: "Cat Tree", 
     description: "a towering monument to feline dominance. sprays unidentified liquids at trespassers.", 
     hp: 2000, 
-    attack: 25, 
+    attack: 20, 
     range: 2, 
-    speed: 15 
+    speed: 15,
+    quirks: [
+      { id: "multi_target", name: "Multi Target", description: "Can strike up to 2 unique enemies within range.", trigger: "combat_calculation", value: 2 }
+    ]
   },
   scratching_post: {
     name: "Scratching Post",

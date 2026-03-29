@@ -31,7 +31,8 @@
             atkMod,
             spdMod,
             movMod,
-            activeShields: u.modifiers?.some((m: any) => m.source === 'cardboard_box') || false
+            activeShields: u.modifiers?.some((m: any) => m.source === 'cardboard_box') || false,
+            attachment: null
           };
         }
         if ($state.buildings && $state.buildings[$uid]) {
@@ -52,7 +53,8 @@
             atkMod: 0,
             spdMod: 0,
             movMod: 0,
-            range: stats?.range || 0
+            range: stats?.range || 0,
+            attachment: b.attachment
           };
         }
         if ($state.traps && $state.traps[$uid]) {
@@ -73,7 +75,8 @@
             quirks: stats?.quirks || [],
             wasHitLastTurn: false,
             modifiers: [],
-            atkMod: 0, spdMod: 0, movMod: 0
+            atkMod: 0, spdMod: 0, movMod: 0,
+            attachment: null
           };
         }
       }
@@ -108,7 +111,8 @@
                   wasHitLastTurn: false,
                   modifiers: [],
                   instruction,
-                  atkMod: 0, spdMod: 0, movMod: 0
+                  atkMod: 0, spdMod: 0, movMod: 0,
+                  attachment: null
                 };
               }
             } else if (spawnEffect.params.buildingType) {
@@ -134,7 +138,8 @@
                   wasHitLastTurn: false,
                   modifiers: [],
                   instruction,
-                  atkMod: 0, spdMod: 0, movMod: 0
+                  atkMod: 0, spdMod: 0, movMod: 0,
+                  attachment: null
                 };
               }
             } else if (spawnEffect.params.trapType) {
@@ -159,7 +164,8 @@
                   wasHitLastTurn: false,
                   modifiers: [],
                   instruction,
-                  atkMod: 0, spdMod: 0, movMod: 0
+                  atkMod: 0, spdMod: 0, movMod: 0,
+                  attachment: null
                 };
               }
             }
@@ -184,7 +190,8 @@
             atkMod: 0,
             spdMod: 0,
             movMod: 0,
-            activeShields: false
+            activeShields: false,
+            attachment: null
           };
         }
       }
@@ -367,6 +374,13 @@
               {/if}
               <span class="effect-name">Cardboard Box</span>
               <span class="effect-value">Shield</span>
+            </div>
+          {/if}
+          {#if $selectedUnit.attachment && $selectedUnit.attachment.hp > 0}
+            <div class="effect-item bin" style="border-left: 3px solid #60a0ff; padding-left: 6px;">
+              <span class="icon">{$selectedUnit.attachment.isShield ? '🛡️' : '⏳'}</span>
+              <span class="effect-name">{$selectedUnit.attachment.type.charAt(0).toUpperCase() + $selectedUnit.attachment.type.slice(1)}</span>
+              <span class="effect-value">{$selectedUnit.attachment.hp} / {$selectedUnit.attachment.maxHp} {$selectedUnit.attachment.isShield ? 'HP' : 'Durability'}</span>
             </div>
           {/if}
           {#each $selectedUnit.modifiers as mod}

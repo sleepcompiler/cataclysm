@@ -419,6 +419,27 @@ export function resolveInstantCardPlay(
           });
         }
       }
+      else if (effect.type === "equip_attachment" && play.cmd.target && typeof play.cmd.target === "object" && 'q' in play.cmd.target) {
+        // Find building at target
+        const hexTarget = play.cmd.target as { q: number, r: number };
+        const building = Object.values(state.buildings).find(b => b.owner === play.playerId && b.position.q === hexTarget.q && b.position.r === hexTarget.r);
+        
+        if (building && building.type === "cat_tree") {
+          building.attachment = {
+            type: effect.params.attachmentType,
+            hp: effect.params.hp,
+            maxHp: effect.params.hp,
+            isShield: effect.params.isShield ?? true
+          };
+          console.log(`[PhaseSystem] Equipped ${effect.params.attachmentType} to Cat Tree. HP/Dur: ${effect.params.hp}. Shield: ${effect.params.isShield ?? true}`);
+          
+          if (effect.params.attachmentType === "wizard") {
+             // Wizard heals 500 hp instantly
+             building.hp = Math.min(building.hp + 500, building.maxHp);
+             console.log(`[PhaseSystem] Wizard healed Cat Tree for 500 HP.`);
+          }
+        }
+      }
     }
 
   return events;

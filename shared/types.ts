@@ -26,6 +26,13 @@ export interface Modifier {
   duration: "end_of_turn" | "permanent";
 }
 
+export interface Attachment {
+  type: string;
+  hp: number;
+  maxHp: number;
+  isShield?: boolean;
+}
+
 export interface Unit {
   id: UnitId;
   owner: PlayerId;
@@ -55,6 +62,7 @@ export interface Building {
   pendingDamage: number;
   modifiers: Modifier[];
   uses?: number;
+  attachment?: Attachment;
 }
 
 export interface Trap {
@@ -90,7 +98,7 @@ export interface GameState {
 }
 
 export type CardType = "troop" | "building" | "trap" | "instinct";
-export type TargetType = "tile" | "unit" | "none";
+export type TargetType = "tile" | "unit" | "building" | "none";
 
 export interface Effect {
   type: string;
