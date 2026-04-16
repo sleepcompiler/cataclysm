@@ -27,6 +27,6 @@ this spins up both the frontend (localhost:5173) and the websocket server (local
 
 ## mechanics
 
-- **deckbuilder**: standard decks need exactly 25 cards and at least one stage 1 unit or building to be playable on turn 1. stage 2 and stage 3 units cannot be drafted directly.
+- **deckbuilder**: standard decks need exactly 25 cards and at least one stage 1 unit or building to be playable on turn 1. stage 2 and stage 3 units cannot be played directly.
 - **matchmaking**: global queue for quick matches or 4-letter room codes for private games.
 - **active abilities**: units have active skills ranging from lifesteal to marking delayed-execution countdowns on enemy units. these resolve via dedicated command queues.

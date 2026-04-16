@@ -27,6 +27,7 @@ const frontendDist = path.join(__dirname, "../../frontend/dist");
 
 function serveStatic(res: http.ServerResponse, filePath: string): boolean {
   if (!fs.existsSync(filePath)) return false;
+  if (fs.statSync(filePath).isDirectory()) return false;
   const ext = path.extname(filePath).toLowerCase();
   const mime = MIME[ext] ?? "application/octet-stream";
   const content = fs.readFileSync(filePath);
