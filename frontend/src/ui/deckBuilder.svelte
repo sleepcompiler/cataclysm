@@ -41,6 +41,18 @@
     .filter(([id, card]) => {
       if (filterType !== 'all' && card.type !== filterType) return false;
       if (searchQuery && !card.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (card.draftable === false) return false;
+      
+      if (card.type === 'troop') {
+        const effect = card.effects.find(e => e.type === "spawn_unit" || e.type === "molt_unit");
+        if (effect && effect.params && effect.params.unitType) {
+          const stats = UNIT_DICTIONARY[effect.params.unitType];
+          if (stats && stats.stage > 1) {
+            return false;
+          }
+        }
+      }
+      
       return true;
     })
     .sort((a, b) => a[1].cost - b[1].cost);

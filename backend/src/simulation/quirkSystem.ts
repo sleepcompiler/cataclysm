@@ -108,7 +108,65 @@ export function resolveActiveQuirk(
       return events;
     }
   }
-
+  if (quirk.id === "death_note" || quirk.id === "death_note_accelerated") {
+     const unit = entity as Unit;
+     if (cmd.targetUnits && cmd.targetUnits.length > 0) {
+        const target = state.units[cmd.targetUnits[0]];
+        if (target) {
+           const dist = hexDistance(unit.position, target.position);
+           target.deathCountdown = quirk.id === "death_note" ? dist * 2 : dist * 1;
+           console.log(`[QuirkSystem] Death Note applied to ${target.type} with a ${target.deathCountdown} turn countdown!`);
+        }
+     }
+  }
+  else if (quirk.id === "deduction_trap_skill" || quirk.id === "advanced_deduction_trap") {
+     if (cmd.target && typeof cmd.target === "object" && 'q' in cmd.target) {
+        const hex = cmd.target as {q: number, r: number};
+        const type = quirk.id === "deduction_trap_skill" ? "deduction_trap_1" : "deduction_trap_2";
+        // Need to import createTrap properly! Let's just create the object manually or assume it works for now? Wait, createTrap is in game/trap.
+        // We'll require it inside the block or just manually assign.
+        const tId = `tr_${Date.now()}_${Math.random()}`;
+        state.traps[tId] = {
+           id: tId,
+           owner: playerId,
+           type: type,
+           position: hex,
+           modifiers: []
+        };
+        console.log(`[QuirkSystem] L Gato placed a deduction trap at ${hex.q},${hex.r}`);
+     }
+  }
+  else if (quirk.id === "rip_and_tear") {
+     const unit = entity as Unit;
+     const hpCost = Math.floor(unit.maxHp * 0.1);
+     if (unit.hp > hpCost) {
+         unit.hp -= hpCost;
+         unit.modifiers.push({ source: "rip_and_tear", stat: "attack", amount: Math.floor(unit.attack * 0.1), duration: "permanent" });
+         console.log(`[QuirkSystem] Rip and tear used. HP down by ${hpCost}, Attack bumped!`);
+     }
+  }
+  else if (quirk.id === "amaterasu") {
+     const unit = entity as Unit;
+     if (cmd.targetUnits && cmd.targetUnits.length > 0) {
+        const target = state.units[cmd.targetUnits[0]];
+        if (target && hexDistance(unit.position, target.position) <= 3) {
+           target.burnDamage = (target.burnDamage || 0) + 20;
+           console.log(`[QuirkSystem] Amaterasu applied. ${target.type} takes 20 burn damage per turn!`);
+        }
+     }
+  }
+  else if (quirk.id === "amenotejikara") {
+     if (cmd.targetUnits && cmd.targetUnits.length >= 2) {
+        const u1 = state.units[cmd.targetUnits[0]];
+        const u2 = state.units[cmd.targetUnits[1]];
+        if (u1 && u2) {
+           const tempPos = { ...u1.position };
+           u1.position = { ...u2.position };
+           u2.position = tempPos;
+           console.log(`[QuirkSystem] Swapped positions of ${u1.type} and ${u2.type}!`);
+        }
+     }
+  }
   events.push({
     type: "quirk_activated",
     playerId,

@@ -2,6 +2,8 @@ import { GameState, Unit, Building } from "@hex-strategy/shared";
 import { DamageAppliedEvent, UnitKilledEvent, BuildingDestroyedEvent, PlayerEliminatedEvent } from "@hex-strategy/shared";
 import { UNIT_DICTIONARY, BUILDING_DICTIONARY } from "@hex-strategy/shared";
 import { hexDistance } from "../game/hexMath";
+import { CARD_LIBRARY } from "../cards/cards";
+import { createUnit } from "../game/unit";
 
 // an attack queued up in the initiative pass
 interface AttackIntent {
@@ -36,7 +38,7 @@ function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
       baseAtk = stats.attack;
       baseSpeed = stats.speed;
       baseRange = stats.range || 1; // Units default to 1 range (melee)
-      quirks = stats.quirks || [];
+      quirks = u.activeQuirks !== undefined ? u.activeQuirks : (stats.quirks || []);
     }
   }
 
@@ -58,6 +60,9 @@ function getEffectiveStats(entity: Unit | Building, isBuilding: boolean) {
         if (entity.hp < maxHp / 3) {
           finalAtk *= (q.value || 2);
         }
+      }
+      if (q.id === "rev_up") {
+        finalAtk += (maxHp - entity.hp);
       }
     }
   }
@@ -269,6 +274,14 @@ export function processDamageAndDeath(state: GameState): {
         });
         continue;
       }
+
+      const uTarget = target as Unit;
+      uTarget.lifetimeDamageTaken = (uTarget.lifetimeDamageTaken || 0) + dmg;
+      if (uTarget.type === "zenyatsu" && uTarget.armedForRetaliation && dmg > 0) {
+          console.log(`[combat] Zenyatsu was resting and retaliates! Thunderclap applied to ${attackerType} for 80 damage!`);
+          attacker.hp -= 80;
+          uTarget.armedForRetaliation = false;
+      }
     }
 
     // deal damage immediately
@@ -309,9 +322,62 @@ export function processDamageAndDeath(state: GameState): {
       console.log(`[combat] Mirror! Reflected ${reflected} damage back to ${getPlayerName(attackerOwner)}`);
     }
 
-    if (!attackerIsBuilding) (attacker as Unit).hasAttackedThisTurn = true;
+    if (!attackerIsBuilding) {
+      const u = attacker as Unit;
+      u.hasAttackedThisTurn = true;
+      if (dmg > 0) {
+        const uQuirks = u.activeQuirks !== undefined ? u.activeQuirks : (UNIT_DICTIONARY[u.type]?.quirks || []);
+        
+        for (const q of uQuirks) {
+            if (q.id === "curse_mark") {
+                 let heal = Math.floor(dmg * (q.value || 0.5));
+                 u.hp = Math.min(u.maxHp, u.hp + heal);
+                 console.log(`[combat] ${u.type} lifestealed ${heal} HP!`);
+            }
+        }
 
-    console.log(`[combat spd:${intent.speed}] ${attackerOwner}'s ${attackerType} → ${targetOwner}'s ${targetType} for ${dmg} (${target.hp} hp left)`);
+        for (const q of uQuirks) {
+          if (q.trigger === "on_attack") {
+            if (q.id === "copy_ability" && !targetIsBuilding) {
+               const tQuirks = (target as Unit).activeQuirks?.length ? (target as Unit).activeQuirks : (UNIT_DICTIONARY[(target as Unit).type]?.quirks || []);
+               if (tQuirks && tQuirks.length > 0) {
+                   u.activeQuirks = tQuirks.filter(x => x.id !== "copy_ability" && x.id !== "copy_ability_2");
+                   console.log(`[combat] Okcatsu Mewta copied abilities from ${(target as Unit).type}`);
+               }
+            }
+            if (q.id === "copy_ability_2" && !targetIsBuilding) {
+               const tQuirks = (target as Unit).activeQuirks?.length ? (target as Unit).activeQuirks : (UNIT_DICTIONARY[(target as Unit).type]?.quirks || []);
+               const freshQuirks = tQuirks ? tQuirks.filter(x => x.id !== "copy_ability" && x.id !== "copy_ability_2") : [];
+               if (freshQuirks.length > 0) {
+                   if (!u.activeQuirks) u.activeQuirks = [];
+                   u.activeQuirks.push(...freshQuirks);
+                   while (u.activeQuirks.length > 2) {
+                       u.activeQuirks.shift();
+                   }
+                   console.log(`[combat] Rika Link Mode copied abilities. Active Quirks length: ${u.activeQuirks.length}`);
+               }
+            }
+            if (q.id === "chain_lightning") {
+              const nearby = Object.values(state.units).filter(n => n.owner !== attackerOwner && n.id !== target.id && hexDistance(n.position, (target as any).position) <= 1);
+              for(const n of nearby) {
+                 n.hp -= (q.value || 20);
+                 console.log(`[combat] Chain Lightning struck ${n.type} for ${q.value||20} dmg`);
+              }
+            }
+            if (q.id === "tongue_pull") {
+               const neighbors = [{q:1,r:-1},{q:1,r:0},{q:0,r:1},{q:-1,r:1},{q:-1,r:0},{q:0,r:-1}].map(d => ({q: (attacker as any).position.q + d.q, r: (attacker as any).position.r + d.r}));
+               const open = neighbors.find(n => !Object.values(state.units).some(x => x.position.q === n.q && x.position.r === n.r) && !Object.values(state.buildings).some(x => x.position.q === n.q && x.position.r === n.r) && state.map[`${n.q},${n.r}`] && state.map[`${n.q},${n.r}`].terrain !== "water");
+               if (open) {
+                  target.position = open as any;
+                  console.log(`[combat] Toad pulled target to ${open.q},${open.r}`);
+               }
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[combat spd:${intent.speed}] ${getPlayerName(attackerOwner)}'s ${attackerType} → ${getPlayerName(targetOwner)}'s ${targetType} for ${dmg} (${target.hp} hp left)`);
 
     events.push({
       type: "damage_applied",
@@ -330,6 +396,13 @@ export function processDamageAndDeath(state: GameState): {
   // --- phase 4: remove the dead ---
   for (const [id, u] of Object.entries(state.units)) {
     if (u.hp <= 0) {
+      if (u.type === "katarot" || u.type === "ss_katarot") {
+         const pState = state.players[u.owner];
+         if (pState) {
+            pState.katarotDeaths = (pState.katarotDeaths || 0) + 1;
+            console.log(`[combat] ${u.type} died. Katarot deaths for ${u.owner}: ${pState.katarotDeaths}`);
+         }
+      }
       // figure out who killed it
       const killerIntent = intents.find(i => !i.targetIsBuilding && (i.target as Unit).id === id && i.target.hp <= 0);
 
@@ -342,6 +415,12 @@ export function processDamageAndDeath(state: GameState): {
           killer.modifiers.push({ source: "sharpness", stat: "attack", amount: bonus, duration: "permanent" });
           console.log(`[combat] Panther ${killer.owner} gained +${bonus} attack from KO`);
         }
+        const titanQuirk = UNIT_DICTIONARY[killer.type]?.quirks?.find(q => q.id === "titan_killer");
+        if (titanQuirk) {
+          killer.modifiers.push({ source: "titan_killer", stat: "attack", amount: 10, duration: "permanent" });
+          killer.modifiers.push({ source: "titan_killer", stat: "speed", amount: 10, duration: "permanent" });
+          console.log(`[combat] Levi ${killer.owner} gained +10 ATK/SPD from titan kill!`);
+        }
       }
 
       events.push({
@@ -353,6 +432,57 @@ export function processDamageAndDeath(state: GameState): {
       console.log(`[combat] ${u.type} (${getPlayerName(u.owner)}) KO'd`);
       delete state.units[id];
     }
+  }
+
+  // Track survivors for Potential Cat evolution
+  const combatParticipants = new Set<string>();
+  for (const intent of intents) {
+     if (!intent.attackerIsBuilding && state.units[(intent.attacker as Unit).id]) combatParticipants.add((intent.attacker as Unit).id);
+     if (!intent.targetIsBuilding && state.units[(intent.target as Unit).id]) combatParticipants.add((intent.target as Unit).id);
+  }
+  for (const id of combatParticipants) {
+     const u = state.units[id];
+     if (!u || u.hp <= 0) continue;
+
+     // Zenkai Boost
+     const stats = UNIT_DICTIONARY[u.type];
+     const quirks = u.activeQuirks !== undefined ? u.activeQuirks : (stats.quirks || []);
+     const zenkai = quirks.find(q => q.id === "zenkai_boost");
+     if (zenkai && u.wasHitLastTurn) {
+         u.maxHp += (zenkai.value || 10);
+         u.hp += (zenkai.value || 10);
+         u.modifiers.push({ source: "zenkai_boost", stat: "attack", amount: (zenkai.value || 10), duration: "permanent" });
+         console.log(`[combat] ${u.type} survived damage and got a Zenkai boost (+${zenkai.value || 10} HP/ATK)!`);
+         u.wasHitLastTurn = false;
+     }
+
+     if (u.type === "potential_cat") {
+        u.combatPhasesSurvived = (u.combatPhasesSurvived || 0) + 1;
+        if (u.combatPhasesSurvived >= 2) {
+           console.log(`[combat] Potential Cat survived 2 combats! Molting to 10 Shadows Kitten and giving Summon Shikigami.`);
+           u.combatPhasesSurvived = -999; // Prevents infinite trigger
+           const p = state.players[u.owner];
+           if (p) {
+              const cardBase = CARD_LIBRARY["summon_shikigami"];
+              if (cardBase) p.hand.push({ ...cardBase, id: `c_evo_${Date.now()}_${Math.random()}` } as any);
+           }
+           const newUnit = createUnit("ten_shadows_kitten", u.owner, u.position);
+           newUnit.hasMovedThisTurn = u.hasMovedThisTurn;
+           newUnit.hasAttackedThisTurn = u.hasAttackedThisTurn;
+           delete state.units[u.id];
+           state.units[newUnit.id] = newUnit;
+        }
+     }
+     
+     if (u.type === "chainsaw_cat" && (u.lifetimeDamageTaken || 0) >= u.maxHp) {
+        console.log(`[combat] Chainsaw cat sustained lifetime damage >= maxHp. Pochita Molt triggers!`);
+        u.lifetimeDamageTaken = 0;
+        const newUnit = createUnit("demonic_chainsaw_cat", u.owner, u.position);
+        newUnit.hasMovedThisTurn = u.hasMovedThisTurn;
+        newUnit.hasAttackedThisTurn = u.hasAttackedThisTurn;
+        delete state.units[u.id];
+        state.units[newUnit.id] = newUnit;
+     }
   }
 
   for (const [id, b] of Object.entries(state.buildings)) {

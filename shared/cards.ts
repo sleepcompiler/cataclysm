@@ -1,15 +1,6 @@
 import { Card } from "./types";
 import { STAGE_1_UNIT_TEMPLATES, STAGE_1_BUILDING_TEMPLATES, STAGE_1_TRAP_TEMPLATES } from "./unitStats";
 
-// molt chains:
-//   house kitten → tabby → maine coon
-//   house kitten → tabby → calico
-//   house kitten → siamese
-//   house kitten → sphynx
-//   stray kitten → tom → lion
-//   stray kitten → alley cat → panther
-
-// stage 1 units (now imported from unitStats)
 export const STARTER_TEMPLATES = [...STAGE_1_UNIT_TEMPLATES, ...STAGE_1_BUILDING_TEMPLATES, ...STAGE_1_TRAP_TEMPLATES];
 
 export interface DeckFormat {
@@ -29,13 +20,11 @@ export const STANDARD_FORMAT: DeckFormat = {
 };
 
 export const DEFAULT_DECK = [
-  "house_kitten", "house_kitten", "house_kitten",
-  "stray_kitten", "stray_kitten", "stray_kitten",
-  "tabby", "tabby", "tom", "tom", "alley_cat", "alley_cat",
-  "panther", "lion", "siamese", "sphynx", "calico",
-  "fresh_spark", "random_evolution",
+  "potential_cat", "potential_cat", "potential_cat",
+  "okcatsu_mewta", "okcatsu_mewta", "okcatsu_mewta",
+  "takabas_laughter", "takabas_laughter",
   "cat_tree_cannon", "cat_tree_wizard", "cat_tree_catapult",
-  "scratching_post", "cardboard_box"
+  "scratching_post", "cardboard_box", "treat_dispenser"
 ];
 
 // Ensure DEFAULT_DECK is 25 cards
@@ -45,130 +34,100 @@ while (DEFAULT_DECK.length < 25) {
 
 export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
 
-  //  stage 1 troops (deployable) 
-
-  house_kitten: {
-    templateId: "house_kitten",
-    name: "House Kitten",
-    description: "hyperactive little runt. insurance companies hate him",
+  // troops
+  potential_cat: {
+    templateId: "potential_cat",
+    name: "Potential Cat",
+    description: "Generates shadow tickets each turn it survives.",
     type: "troop",
     cost: 1,
     target: "tile",
-    effects: [{ type: "spawn_unit", params: { unitType: "house_kitten" } }]
+    effects: [{ type: "spawn_unit", params: { unitType: "potential_cat" } }]
   },
-  stray_kitten: {
-    templateId: "stray_kitten",
-    name: "Stray Kitten",
-    description: "doesn't know what a thing is but he's willing to fight it.",
+  okcatsu_mewta: {
+    templateId: "okcatsu_mewta",
+    name: "Okcatsu Mewta",
+    description: "Copies enemy abilities when he attacks them.",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    effects: [{ type: "spawn_unit", params: { unitType: "okcatsu_mewta" } }]
+  },
+  ten_shadows_kitten: {
+    templateId: "ten_shadows_kitten",
+    name: "10 Shadows Kitten",
+    description: "Has reached his full potential.",
+    type: "troop",
+    cost: 4,
+    target: "tile",
+    moltsFrom: "potential_cat",
+    effects: [{ type: "molt_unit", params: { unitType: "ten_shadows_kitten" } }]
+  },
+  katarot: {
+    templateId: "katarot",
+    name: "Katarot",
+    description: "Loves a good fight. Spawns as Super Katarot if he dies enough.",
     type: "troop",
     cost: 1,
     target: "tile",
-    effects: [{ type: "spawn_unit", params: { unitType: "stray_kitten" } }]
+    effects: [{ type: "spawn_unit", params: { unitType: "katarot" } }]
   },
-
-  //  stage 2 molts 
-
-  tabby: {
-    templateId: "tabby",
-    name: "Tabby",
-    description: "a house cat on his day out. not the sharpest, but he's got claws",
+  levi_caterman: {
+    templateId: "levi_caterman",
+    name: "Levi Caterman",
+    description: "Snowballs speed and attack on kill.",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    effects: [{ type: "spawn_unit", params: { unitType: "levi_caterman" } }]
+  },
+  sasuke_uchinya: {
+    templateId: "sasuke_uchinya",
+    name: "Sasuke Uchinya",
+    description: "Has lifesteal.",
+    type: "troop",
+    cost: 2,
+    target: "tile",
+    effects: [{ type: "spawn_unit", params: { unitType: "sasuke_uchinya" } }]
+  },
+  chainsaw_cat: {
+    templateId: "chainsaw_cat",
+    name: "Chainsaw Cat",
+    description: "Attack scales as HP falls.",
     type: "troop",
     cost: 1,
     target: "tile",
-    moltsFrom: "house_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "tabby" } }]
+    effects: [{ type: "spawn_unit", params: { unitType: "chainsaw_cat" } }]
   },
-  siamese: {
-    templateId: "siamese",
-    name: "Siamese",
-    description: "very vocal and very mean. will scream at you if you look at her wrong.",
+  l_gato: {
+    templateId: "l_gato",
+    name: "L Gato",
+    description: "Places invisible traps that end turn.",
     type: "troop",
     cost: 2,
     target: "tile",
-    moltsFrom: "house_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "siamese" } }]
+    effects: [{ type: "spawn_unit", params: { unitType: "l_gato" } }]
   },
-  sphynx: {
-    templateId: "sphynx",
-    name: "Sphynx",
-    description: "his name is larry and he knows what you did. ",
+  light_nyagami: {
+    templateId: "light_nyagami",
+    name: "Light Nyagami",
+    description: "Points to an enemy and gives them a countdown to death.",
     type: "troop",
     cost: 2,
     target: "tile",
-    moltsFrom: "house_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "sphynx" } }]
+    effects: [{ type: "spawn_unit", params: { unitType: "light_nyagami" } }]
   },
-  tom: {
-    templateId: "tom",
-    name: "Tom Cat",
-    description: "brute. does not appreciate being picked up. he doesn't bite; he punches.",
+  zenyatsu: {
+    templateId: "zenyatsu",
+    name: "Zenyatsu",
+    description: "Asleep, but hits hard and first when struck while still.",
     type: "troop",
     cost: 2,
     target: "tile",
-    moltsFrom: "stray_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "tom" } }]
-  },
-  alley_cat: {
-    templateId: "alley_cat",
-    name: "Alley Cat",
-    description: "lean mean scratching machine. will fight you for your sandwich and spit it out. ",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "stray_kitten",
-    effects: [{ type: "molt_unit", params: { unitType: "alley_cat" } }]
+    effects: [{ type: "spawn_unit", params: { unitType: "zenyatsu" } }]
   },
 
-
-
-
-  //  stage 3 molts 
-
-  maine_coon: {
-    templateId: "maine_coon",
-    name: "Maine Coon",
-    description: "absolute unit. does not care for fighting, would rather nap",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "tabby",
-    effects: [{ type: "molt_unit", params: { unitType: "maine_coon" } }]
-  },
-
-
-  calico: {
-    templateId: "calico",
-    name: "Calico",
-    description: "Vibrant and unpredictable.",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "tabby",
-    effects: [{ type: "molt_unit", params: { unitType: "calico" } }]
-  },
-  panther: {
-    templateId: "panther",
-    name: "Panther",
-    description: "watches lego batman every night. dreams of being catwoman. ",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "alley_cat",
-    effects: [{ type: "molt_unit", params: { unitType: "panther" } }]
-  },
-  lion: {
-    templateId: "lion",
-    name: "Lion",
-    description: "the ultimate brawler. the apex predator. or so she thinks. shes just a really big orange cat. ",
-    type: "troop",
-    cost: 2,
-    target: "tile",
-    moltsFrom: "tom",
-    effects: [{ type: "molt_unit", params: { unitType: "lion" } }]
-  },
-
-  //  buildings 
-
+  // buildings 
   scratching_post: {
     templateId: "scratching_post",
     name: "Scratching Post",
@@ -206,8 +165,7 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "spawn_building", params: { buildingType: "grooming_station" } }]
   },
 
-  //  traps 
-
+  // traps 
   yarn_ball: {
     templateId: "yarn_ball",
     name: "Yarn Ball",
@@ -227,49 +185,107 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     effects: [{ type: "spawn_trap", params: { trapType: "cucumber" } }]
   },
 
-  //   instinct cards (spells) 
-
-  //  molt instincts 
-
-  fresh_spark: {
-    templateId: "fresh_spark",
-    name: "Fresh Spark",
-    description: "Allows instant molting of a unit played this turn.",
+  // instincts 
+  takabas_laughter: {
+    templateId: "takabas_laughter",
+    name: "Takaba's Laughter",
+    description: "Convince Takaba it would be funny if megumi reached his full potential. Instantly molts a 10 Shadows Kitten to Stage 3.",
     type: "instinct",
-    cost: 1,
+    cost: 2,
     target: "unit",
-    effects: [{ type: "rush_molt", params: {} }]
+    effects: [{ type: "rush_molt", params: { targetStage: "ten_shadows_cat" } }]
   },
-  stray_spirit: {
-    templateId: "stray_spirit",
-    name: "Stray Spirit",
-    description: "Scans your deck and pulls a random Stray line card and plays it on your kitten to molt it.",
+  rikas_collar: {
+    templateId: "rikas_collar",
+    name: "Rika's Collar",
+    description: "Molts Okcatsu Mewta into Rika Link Mode.",
+    type: "instinct",
+    cost: 2,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "rika_link_mode" } }]
+  },
+  summon_shikigami: {
+    templateId: "summon_shikigami",
+    name: "Summon Shikigami",
+    description: "Consumes all shadow tickets to summon a Shikigami.",
+    type: "instinct",
+    cost: 0,
+    target: "tile",
+    draftable: false,
+    effects: [{ type: "summon_shikigami", params: {} }]
+  },
+  odm_upgrade: {
+    templateId: "odm_upgrade",
+    name: "ODM Upgrade",
+    description: "Molts Levi Caterman into Scout Levi.",
+    type: "instinct",
+    cost: 2,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "scout_levi" } }]
+  },
+  erwins_sacrifice: {
+    templateId: "erwins_sacrifice",
+    name: "Erwin's Sacrifice",
+    description: "Molts Scout Levi into Captain Levi.",
+    type: "instinct",
+    cost: 4,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "captain_levi" } }]
+  },
+  mangekyou_awakening: {
+    templateId: "mangekyou_awakening",
+    name: "Mangekyou Awakening",
+    description: "Molts Sasuke into Rogue Sasuke.",
+    type: "instinct",
+    cost: 2,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "rogue_sasuke" } }]
+  },
+  six_paths_chakra: {
+    templateId: "six_paths_chakra",
+    name: "Six Paths Chakra",
+    description: "Molts Rogue Sasuke into Shadow Hokage Sasuke.",
+    type: "instinct",
+    cost: 4,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "shadow_hokage_sasuke" } }]
+  },
+  devil_blood: {
+    templateId: "devil_blood",
+    name: "Devil Blood",
+    description: "Molts Chainsaw Cat into Demonic Chainsaw Cat.",
     type: "instinct",
     cost: 3,
     target: "unit",
-    effects: [{ type: "deck_molt", params: { line: "stray" } }]
+    effects: [{ type: "rush_molt", params: { targetStage: "demonic_chainsaw_cat" } }]
   },
-  house_spirit: {
-    templateId: "house_spirit",
-    name: "House Spirit",
-    description: "Scans your deck and pulls a random House line card and plays it on your kitten to molt it.",
+  the_inheritance: {
+    templateId: "the_inheritance",
+    name: "The Inheritance",
+    description: "Molts L Gato into L's Successors.",
     type: "instinct",
     cost: 3,
     target: "unit",
-    effects: [{ type: "deck_molt", params: { line: "house" } }]
+    effects: [{ type: "rush_molt", params: { targetStage: "ls_successors" } }]
   },
-
-  random_evolution: {
-    templateId: "random_evolution",
-    name: "Random Evolution",
-    description: "Molts a random kitten on the board into a random Stage 3 cat from your hand or deck. Consumes both cards.",
+  shinigami_eyes: {
+    templateId: "shinigami_eyes",
+    name: "Shinigami Eyes",
+    description: "Molts Light Nyagami into Kami of the New World.",
     type: "instinct",
-    cost: 1,
-    target: "none",
-    effects: [{ type: "random_evolution", params: {} }]
+    cost: 2,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "kami_of_new_world" } }]
   },
-
-  //   other instincts
+  adderall: {
+    templateId: "adderall",
+    name: "Adderall",
+    description: "Molts Zenyatsu into Awakened Zenyatsu.",
+    type: "instinct",
+    cost: 3,
+    target: "unit",
+    effects: [{ type: "rush_molt", params: { targetStage: "awakened_zenyatsu" } }]
+  },
   catnip_mist: {
     templateId: "catnip_mist",
     name: "Catnip Mist",
@@ -297,7 +313,6 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
     target: "unit",
     effects: [{ type: "shield", params: {} }]
   },
-
   purr: {
     templateId: "purr",
     name: "Purr",
@@ -347,29 +362,26 @@ export const CARD_LIBRARY: Record<string, Omit<Card, "id">> = {
 
 export function validateDeck(deck: string[], format: DeckFormat = STANDARD_FORMAT): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-
   if (deck.length !== format.deckSize) {
     errors.push(`Deck must have exactly ${format.deckSize} cards (current: ${deck.length}).`);
   }
-
   const counts: Record<string, number> = {};
   let stage1Count = 0;
-
   for (const id of deck) {
+    if (CARD_LIBRARY[id]?.draftable === false) {
+      errors.push(`Card '${CARD_LIBRARY[id]?.name || id}' cannot be drafted directly.`);
+    }
     counts[id] = (counts[id] || 0) + 1;
     if (counts[id] > format.maxCopies) {
       const name = CARD_LIBRARY[id]?.name || id;
       errors.push(`Maximum ${format.maxCopies} copies of '${name}' allowed.`);
     }
-
     if (STAGE_1_UNIT_TEMPLATES.includes(id) || STAGE_1_BUILDING_TEMPLATES.includes(id)) {
       stage1Count++;
     }
   }
-
   if (format.requireStage1 && stage1Count === 0) {
     errors.push("Deck must have at least one Stage 1 unit or building for a valid turn 1 play.");
   }
-
   return { valid: errors.length === 0, errors };
 }

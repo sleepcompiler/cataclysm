@@ -4,6 +4,7 @@
 !.env.example
 
 # Common
+data/
 node_modules/
 dist/
 build/

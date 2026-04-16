@@ -66,10 +66,11 @@ export class Match {
         [deckTemplates[i], deckTemplates[j]] = [deckTemplates[j], deckTemplates[i]];
       }
 
-      // guarantee a Stage 1 unit (kitten) or building so they can play turn 1
-      const starterIndex = deckTemplates.findIndex(id => 
-        STAGE_1_UNIT_TEMPLATES.includes(id) || STAGE_1_BUILDING_TEMPLATES.includes(id)
-      );
+      // prioritize a Stage 1 unit (kitten) so they have a unit turn 1, fallback to building
+      let starterIndex = deckTemplates.findIndex(id => STAGE_1_UNIT_TEMPLATES.includes(id));
+      if (starterIndex === -1) {
+        starterIndex = deckTemplates.findIndex(id => STAGE_1_BUILDING_TEMPLATES.includes(id));
+      }
       if (starterIndex > 4 && starterIndex !== -1) {
          [deckTemplates[0], deckTemplates[starterIndex]] = [deckTemplates[starterIndex], deckTemplates[0]];
          // shuffle the top 5 loosely so we don't always draw the kitten at draw index 0

@@ -94,6 +94,9 @@
           <div class="stats-row">
             <span class="stat">Catnip: {player.catnip}</span>
             <span class="stat">Cards: {player.hand.length}</span>
+            {#if player.shadowTokens}
+              <span class="stat">Shadows: {player.shadowTokens}</span>
+            {/if}
           </div>
         </div>
       {/each}

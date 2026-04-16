@@ -1,83 +1,32 @@
-# 🐾 Catnip Conquest
+# cataclysm
 
-**Catnip Conquest** is a low-latency, hex-based multiplayer strategy game built with a "code-first" philosophy. Command an army of tactical felines, manage your Catnip resources, and defend your Cat Tree against rival clowders.
+a hex-based multiplayer strategy game. you manage a deck of 25 cards—troops, buildings, and instincts—to fight on a hexagonal grid and destroy the opponent's cat tree.
 
-Designed with a focus on **deterministic simulation** and **cross-platform type safety**, the game provides a snappy, responsive experience even on low-spec hardware.
+the roster is mostly anime-inspired cats. they don't just upgrade linearly; they evolve mid-match based on specific triggers. some evolve after dying, some evolve after taking enough lifetime damage, and some evolve when you play specific catalyst cards on them. 
 
----
+## tech stack
 
-## 🚀 Technical Highlights
+- **frontend**: svelte + vite
+- **backend**: node.js and websockets
+- **core logic**: shared typescript
 
-### ⚡ Deterministic Simulation Engine
-The core game logic lives in a standalone simulation layer shared (via TypeScript) between the client and server. 
-- **Predictive Client-Side Logic**: The frontend uses the same simulation code to provide instant visual feedback (ghost units, pathing previews) before the server confirms the turn.
-- **Phase-Based Resolution**: Combat is resolved in a structured "Combat Phase" where initiative (Speed) and positioning determine the outcome, ensuring every match is fair and predictable.
+the combat engine lives in the `shared/` directory. both the client and server run the exact same simulation code to ensure state stays perfectly synced and predictive pathing works without latency. the engine handles phase-based combat, so all movements are locked in and attacks resolve transitively based on unit speed stats.
 
-### 🏗️ Advanced Architecture
-- **Unified Logic Hub**: All unit stats, card effects, and game rules reside in a `shared/` directory, imported by both the Svelte frontend and Node.js backend to prevent "brain-split" bugs.
-- **Tactical Hex Engine**: 
-  - Efficient **BFS (Breadth-First Search)** for movement and range calculations.
-  - **Symmetric Map Generation** ensures competitive balance.
-  - **Spatial Querying**: Optimized targeting for multi-strike and area-of-effect abilities.
+## running it locally
 
-### 🐈 Latest Feature: Cat Tree Attachment System
-The Cat Tree is no longer a static landmark. It now supports a dynamic **Mod/Attachment System**:
-- **Multi-Target Logic**: Refactored combat targeting allows the Cat Tree to track and strike multiple unique targets per turn.
-- **Dynamic Equipment**: Attachments like **Cannons**, **Catapults**, and **Cat Wizards** grant additional attacks, range extensions, or instant utility (Healing/Zapping).
-- **Structural Layering**: Integrated damage-absorption logic where shields take the hit before the tower's base HP is affected.
+requires node.js (v18+).
 
----
+```bash
+git clone https://github.com/fakeplastic-tree/catnip.git
+cd catnip
+npm install
+npm run dev
+```
 
-## 🌟 Key Features
+this spins up both the frontend (localhost:5173) and the websocket server (localhost:3000) concurrently.
 
-- **Real-time Multiplayer**: Low-overhead WebSockets for instant turn-sync.
-- **Matchmaking Layer**:
-  - **Quick Match**: Global FCFS queue for immediate play.
-  - **Private Rooms**: 4-character shortcodes for playing with friends.
-- **Evolution Mechanics**: Deep strategy involving unit "Molting" (Stage 1 -> 2 -> 3) and resource management.
-- **Visual Feedback**: Real-time damage popups, combat logs, and animated state transitions.
+## mechanics
 
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-| :--- | :--- |
-| **Frontend** | Svelte + Vite (HTML5 Canvas Rendering) |
-| **Backend** | Node.js + TypeScript |
-| **Networking** | WebSockets (`ws`) |
-| **Logic** | Shared TypeScript Simulation Library |
-| **Styling** | Vanilla CSS (Modern Fluid Design) |
-
----
-
-## 🏗️ Getting Started
-
-### Prerequisites
-- **Node.js**: v18.0 or higher
-- **npm**: v9.0 or higher
-
-### Installation & Run
-
-1. **Clone & Install**:
-   ```bash
-   git clone https://github.com/fakeplastic-tree/catnip.git
-   cd catnip
-   npm install
-   ```
-
-2. **Launch Development Environment**:
-   Starting from the root directory will launch both the frontend and backend concurrently:
-   ```bash
-   npm run dev
-   ```
-
-- **Client**: `http://localhost:5173`
-- **Server**: `http://localhost:3000`
-
----
-
-## 🗺️ Roadmap
-- [ ] Account-based progression and persistent cat collections.
-- [ ] Ranked matchmaking and elo system. 
-- [ ] AI opponents for solo practice mode.
+- **deckbuilder**: standard decks need exactly 25 cards and at least one stage 1 unit or building to be playable on turn 1. stage 2 and stage 3 units cannot be drafted directly.
+- **matchmaking**: global queue for quick matches or 4-letter room codes for private games.
+- **active abilities**: units have active skills ranging from lifesteal to marking delayed-execution countdowns on enemy units. these resolve via dedicated command queues.

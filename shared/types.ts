@@ -49,6 +49,13 @@ export interface Unit {
   modifiers: Modifier[];
   spawnedThisTurn?: boolean;
   wasHitLastTurn?: boolean;
+  activeQuirks?: any[]; // Allow Okcatsu Mewta to store dynamically copied quirks
+  combatPhasesSurvived?: number; // Potential Cat phase tracking
+  lifetimeDamageTaken?: number; // Chainsaw cat tracking
+  armedForRetaliation?: boolean; // Zenyatsu trap state
+  deathCountdown?: number; // Light Nyagami curse
+  burnDamage?: number; // Sasuke amaterasu
+  activeAbilitiesUsedThisTurn?: number; // Throttle active skills
 }
 
 export interface Building {
@@ -80,9 +87,11 @@ export interface PlayerState {
   maxHp: number;
   catnip: number;
   maxCatnip: number;
+  shadowTokens?: number; // Potential Cat tokens
   hand: Card[];
   deck: Card[];
   deckSize: number;
+  katarotDeaths?: number;
 }
 
 export interface GameState {
@@ -122,4 +131,13 @@ export interface Card {
   effects: Effect[];
   moltsFrom?: string;  // unit type this card upgrades — play it on a tile containing that unit
   ability?: CardAbility;
+  draftable?: boolean; // If false, will not appear in standard deck builders
+}
+
+export interface ActiveAbilityCommand {
+  type: "use_active_ability";
+  unitId: string;
+  abilityId: string;
+  targetHex?: { q: number; r: number };
+  targetUnits?: string[];
 }

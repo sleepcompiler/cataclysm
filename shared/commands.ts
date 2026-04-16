@@ -25,6 +25,7 @@ export interface ActivateQuirkCommand {
   entityId: string;
   quirkId: string;
   target?: TileId | UnitId;
+  targetUnits?: UnitId[]; // Extended for multi-target abilities (like Rinnegan swap)
 }
 
 export type ClientCommand = MoveUnitCommand | PlayCardCommand | ActivateQuirkCommand | EndTurnCommand;

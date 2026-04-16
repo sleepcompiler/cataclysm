@@ -43,8 +43,8 @@ export function resolveInstantCardPlay(
       const tileKey = `${hexTarget.q},${hexTarget.r}`;
       const tile = state.map[tileKey];
 
-      const hasSpawnEffect  = card.effects.some(e => e.type === "spawn_unit" || e.type === "spawn_building" || e.type === "spawn_trap");
-      const hasMoltEffect   = card.effects.some(e => e.type === "molt_unit");
+      const hasSpawnEffect  = card.effects.some(e => e.type === "spawn_unit" || e.type === "spawn_building" || e.type === "spawn_trap" || e.type === "summon_shikigami");
+      const hasMoltEffect   = card.effects.some(e => e.type === "molt_unit" || e.type === "rush_molt");
 
       if (hasMoltEffect) {
         // molt target? — check for a friendly unit of the right base type
@@ -135,8 +135,14 @@ export function resolveInstantCardPlay(
     // Resolve Effects
     for (const effect of card.effects) {
       if (effect.type === "spawn_unit" && play.cmd.target && typeof play.cmd.target === "object" && 'q' in play.cmd.target) {
-        console.log(`[PhaseSystem] spawning ${effect.params.unitType} at ${play.cmd.target.q},${play.cmd.target.r}`);
-        const unit = createUnit(effect.params.unitType, play.playerId, play.cmd.target);
+        let spawnType = effect.params.unitType;
+        if (spawnType === "katarot") {
+            const deaths = player.katarotDeaths || 0;
+            if (deaths >= 2) spawnType = "ss2_katarot";
+            else if (deaths === 1) spawnType = "ss_katarot";
+        }
+        console.log(`[PhaseSystem] spawning ${spawnType} at ${play.cmd.target.q},${play.cmd.target.r}`);
+        const unit = createUnit(spawnType, play.playerId, play.cmd.target);
         state.units[unit.id] = unit;
       }
       else if (effect.type === "molt_unit" && play.cmd.target && typeof play.cmd.target === "object" && 'q' in play.cmd.target) {
@@ -287,8 +293,25 @@ export function resolveInstantCardPlay(
         }
 
         if (u && u.owner === play.playerId) {
-          const evoIndex = player.hand.findIndex(c => c.moltsFrom === u!.type);
-          if (evoIndex !== -1) {
+          if (effect.params && effect.params.targetStage) {
+             // Evolution directly triggered by this instinct
+             const newUnit = createUnit(effect.params.targetStage, play.playerId, u.position);
+             newUnit.spawnedThisTurn = u.spawnedThisTurn;
+             newUnit.hasMovedThisTurn = u.hasMovedThisTurn;
+             newUnit.hasAttackedThisTurn = u.hasAttackedThisTurn;
+             // Kami of New world half-hp penalty
+             if (effect.params.targetStage === "kami_of_new_world") {
+                 newUnit.maxHp = Math.floor(newUnit.maxHp / 2);
+                 newUnit.hp = Math.floor(newUnit.hp / 2);
+             }
+             delete state.units[u.id];
+             state.units[newUnit.id] = newUnit;
+             console.log(`[PhaseSystem] Catalyst play molted ${u.type} -> ${effect.params.targetStage} directly`);
+             events.push({ type: "unit_molted", playerId: play.playerId, fromType: u.type, toType: effect.params.targetStage, position: u.position });
+          } else {
+            // Fresh spark generic logic
+            const evoIndex = player.hand.findIndex(c => c.moltsFrom === u!.type);
+            if (evoIndex !== -1) {
             const evoCard = player.hand[evoIndex];
             
             // Validate cost of hand-pulled card!
@@ -319,6 +342,7 @@ export function resolveInstantCardPlay(
           }
         }
       }
+    }
       else if (effect.type === "deck_molt" && play.cmd.target) {
         let u: Unit | undefined;
         if (typeof play.cmd.target === "string") {
@@ -440,6 +464,57 @@ export function resolveInstantCardPlay(
           }
         }
       }
+      else if (effect.type === "summon_shikigami" && play.cmd.target) {
+        const hexTarget = play.cmd.target as { q: number, r: number };
+        // Find adjacent Potential Cat or 10 Shadows Kitten
+        let caster = Object.values(state.units).find(u => 
+           (u.type === "potential_cat" || u.type === "ten_shadows_kitten") && 
+           u.owner === play.playerId && 
+           hexDistance(u.position, hexTarget) <= 1
+        );
+        if (caster) {
+           const pState = state.players[play.playerId];
+           const tokens = pState.shadowTokens || 0;
+           pState.shadowTokens = 0; // Consume all tickets
+           let shikigamiType = "";
+           if (tokens >= 10) shikigamiType = "mahoraga";
+           else if (tokens >= 7) shikigamiType = "tiger_funeral";
+           else if (tokens >= 6) shikigamiType = "round_deer";
+           else if (tokens >= 5) shikigamiType = "serpent";
+           else if (tokens >= 4) shikigamiType = "toad";
+           else if (tokens >= 3) shikigamiType = "nue";
+           else shikigamiType = "divine_dog_white";
+
+           let shikigamiOwner = play.playerId;
+           if (tokens >= 9 && caster.type !== "ten_shadows_kitten") {
+               shikigamiOwner = "neutral";
+               console.log(`[PhaseSystem] Uncontrolled Mahoraga summoned as neutral!`);
+               // Add placeholder player if neutral missing
+               if (!state.players["neutral"]) {
+                   state.players["neutral"] = { 
+                       id: "neutral", name: "Hostile Shikigami", 
+                       deckSize: 0, deck: [], hand: [], 
+                       catnip: 0, maxCatnip: 0, hp: 100, maxHp: 100 
+                   };
+               }
+           }
+
+           const newUnit = createUnit(shikigamiType, shikigamiOwner, hexTarget);
+           state.units[newUnit.id] = newUnit;
+           console.log(`[PhaseSystem] Summoned ${shikigamiType} with ${tokens} shadow tokens!`);
+
+           if (shikigamiType === "divine_dog_white") {
+               const n2 = [{q:1,r:-1},{q:1,r:0},{q:0,r:1},{q:-1,r:1},{q:-1,r:0},{q:0,r:-1}].map(d => ({q: hexTarget.q + d.q, r: hexTarget.r + d.r}));
+               const open = n2.find(n => !Object.values(state.units).some(x => x.position.q === n.q && x.position.r === n.r) && !Object.values(state.buildings).some(x => x.position.q === n.q && x.position.r === n.r));
+               if (open) {
+                   const u2 = createUnit("divine_dog_black", shikigamiOwner, open);
+                   state.units[u2.id] = u2;
+               }
+           }
+        } else {
+           console.log(`[PhaseSystem] Failed to summon: No adjacent Potential Cat found.`);
+        }
+      }
     }
 
   return events;
@@ -451,12 +526,64 @@ export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayer
   state.phase = "command";
   state.currentTurnPlayer = nextPlayerId;
 
+  // Evaluate end_of_turn quirks for prevPlayerId
+  for (const u of Object.values(state.units)) {
+     if (u.owner === prevPlayerId && u.hp > 0) {
+        const stats = UNIT_DICTIONARY[u.type];
+        const quirks = u.activeQuirks?.length ? u.activeQuirks : (stats?.quirks || []);
+        for (const q of quirks) {
+           if (q.trigger === "end_of_turn") {
+               if (q.id === "generate_shadow_ticket") {
+                  const pState = state.players[prevPlayerId];
+                  pState.shadowTokens = (pState.shadowTokens || 0) + (q.value || 1);
+                  console.log(`[PhaseSystem] ${u.type} generated a shadow ticket! Player total: ${pState.shadowTokens}`);
+               }
+               if (q.id === "healing_aura") {
+                  const allies = Object.values(state.units).filter(al => al.owner === prevPlayerId && hexDistance(al.position, u.position) <= 2);
+                  for (const al of allies) {
+                     al.hp = Math.min(al.hp + (q.value || 10), al.maxHp);
+                  }
+                  console.log(`[PhaseSystem] Round Deer healed allies`);
+               }
+               if (q.id === "adapt") {
+                  const enemies = Object.values(state.units).filter(en => en.owner !== prevPlayerId);
+                  let maxAtk = 0;
+                  for (const en of enemies) {
+                     if (en.attack > maxAtk) maxAtk = en.attack;
+                  }
+                  u.modifiers.push({ source: "adapt", stat: "attack", amount: Math.floor(maxAtk / 2), duration: "permanent" });
+                  console.log(`[PhaseSystem] Mahoraga adapted and gained +${Math.floor(maxAtk / 2)} ATK`);
+               }
+           }
+        }
+     }
+  }
+
   // Clear expired 'end_of_turn' modifiers and reset hit flags
   for (const u of Object.values(state.units)) {
-    u.modifiers = u.modifiers.filter(m => m.duration !== "end_of_turn");
-    if (u.owner === prevPlayerId) {
-      u.wasHitLastTurn = false;
-    }
+     if (u.deathCountdown !== undefined && state.turn > 0) {
+         // Death note ticks down for the owner of the turn ending? Let's just tick down for everyone at start of their turn/end of prev.
+         if (u.owner === prevPlayerId) {
+             u.deathCountdown -= 1;
+             console.log(`[PhaseSystem] ${u.type} death countdown dropped to ${u.deathCountdown}`);
+             if (u.deathCountdown <= 0) {
+                 u.hp = 0; // Will be cleaned up by next combat phase or directly.
+                 console.log(`[PhaseSystem] ${u.type} succumbed to the Death Note.`);
+             }
+         }
+     }
+     if (u.type === "zenyatsu" && u.owner === prevPlayerId) {
+         if (!u.hasMovedThisTurn && !u.hasAttackedThisTurn) {
+             u.armedForRetaliation = true;
+             console.log(`[PhaseSystem] Zenyatsu fell asleep and armed for Thunderclap!`);
+         }
+     }
+     
+     u.modifiers = u.modifiers.filter(m => m.duration !== "end_of_turn");
+     if (u.owner === prevPlayerId) {
+       u.wasHitLastTurn = false;
+       u.activeAbilitiesUsedThisTurn = 0;
+     }
   }
   for (const b of Object.values(state.buildings)) {
     b.modifiers = b.modifiers.filter(m => m.duration !== "end_of_turn");
@@ -490,6 +617,11 @@ export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayer
           console.log(`[PhaseSystem] ${u.type} triggered Territorial quirk, +${bonus} movement`);
         }
       }
+    }
+    
+    if (u.burnDamage && u.owner === nextPlayerId) {
+       u.hp -= u.burnDamage;
+       console.log(`[PhaseSystem] ${u.type} took ${u.burnDamage} burn damage! Remaining HP: ${u.hp}`);
     }
   }
 
@@ -541,8 +673,101 @@ export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayer
 
   // Reset ALL units' action flags for the new turn
   for (const unit of Object.values(state.units)) {
-    unit.hasMovedThisTurn = false;
+    if (unit.owner === nextPlayerId) {
+      unit.hasMovedThisTurn = false;
+      unit.spawnedThisTurn = false;
+    }
     unit.hasAttackedThisTurn = false;
-    unit.spawnedThisTurn = false;
   }
+}
+
+export function resolveActiveAbility(
+  state: GameState,
+  play: { playerId: string, cmd: import("@hex-strategy/shared").ActiveAbilityCommand }
+): ServerEvent[] {
+  const events: ServerEvent[] = [];
+  const player = state.players[play.playerId];
+  if (!player) return events;
+
+  const unit = state.units[play.cmd.unitId];
+  if (!unit || unit.owner !== play.playerId) return events;
+
+  if ((unit.activeAbilitiesUsedThisTurn || 0) >= 1) {
+    console.log(`[PhaseSystem] ${unit.type} already used an active ability this turn.`);
+    return events;
+  }
+
+  const uStats = UNIT_DICTIONARY[unit.type];
+  const quirk = (unit.activeQuirks || uStats?.quirks || []).find(q => q.id === play.cmd.abilityId && q.trigger === "active");
+
+  if (!quirk) {
+    console.log(`[PhaseSystem] Quirk ${play.cmd.abilityId} not found or not active on ${unit.type}.`);
+    return events;
+  }
+
+  if (quirk.cost && player.catnip < quirk.cost) {
+    console.log(`[PhaseSystem] Not enough catnip to use ${quirk.name}.`);
+    return events;
+  }
+
+  // Deduct cost and mark used
+  if (quirk.cost) player.catnip -= quirk.cost;
+  unit.activeAbilitiesUsedThisTurn = (unit.activeAbilitiesUsedThisTurn || 0) + 1;
+
+  if (quirk.id === "death_note" || quirk.id === "death_note_accelerated") {
+     if (play.cmd.targetUnits && play.cmd.targetUnits.length > 0) {
+        const target = state.units[play.cmd.targetUnits[0]];
+        if (target) {
+           const dist = hexDistance(unit.position, target.position);
+           target.deathCountdown = quirk.id === "death_note" ? dist * 2 : dist * 1;
+           console.log(`[PhaseSystem] Death Note applied to ${target.type} with a ${target.deathCountdown} turn countdown!`);
+        }
+     }
+  }
+  else if (quirk.id === "deduction_trap_skill" || quirk.id === "advanced_deduction_trap") {
+     if (play.cmd.targetHex) {
+        const type = quirk.id === "deduction_trap_skill" ? "deduction_trap_1" : "deduction_trap_2";
+        const t = createTrap(type, play.playerId, play.cmd.targetHex);
+        state.traps[t.id] = t;
+        console.log(`[PhaseSystem] L Gato placed a deduction trap at ${play.cmd.targetHex.q},${play.cmd.targetHex.r}`);
+     }
+  }
+  else if (quirk.id === "rip_and_tear") {
+     const hpCost = Math.floor(unit.maxHp * 0.1);
+     if (unit.hp > hpCost) {
+         unit.hp -= hpCost;
+         unit.modifiers.push({ source: "rip_and_tear", stat: "attack", amount: Math.floor(unit.attack * 0.1), duration: "permanent" });
+         console.log(`[PhaseSystem] Rip and tear used. HP down by ${hpCost}, Attack bumped!`);
+     }
+  }
+  else if (quirk.id === "amaterasu") {
+     if (play.cmd.targetUnits && play.cmd.targetUnits.length > 0) {
+        const target = state.units[play.cmd.targetUnits[0]];
+        if (target && hexDistance(unit.position, target.position) <= 3) {
+           target.burnDamage = (target.burnDamage || 0) + 20;
+           console.log(`[PhaseSystem] Amaterasu applied. ${target.type} takes 20 burn damage per turn!`);
+        }
+     }
+  }
+  else if (quirk.id === "amenotejikara") {
+     if (play.cmd.targetUnits && play.cmd.targetUnits.length >= 2) {
+        const u1 = state.units[play.cmd.targetUnits[0]];
+        const u2 = state.units[play.cmd.targetUnits[1]];
+        if (u1 && u2) {
+           const tempPos = { ...u1.position };
+           u1.position = { ...u2.position };
+           u2.position = tempPos;
+           console.log(`[PhaseSystem] Swapped positions of ${u1.type} and ${u2.type}!`);
+        }
+     }
+  }
+
+  events.push({
+    type: "active_ability_used",
+    playerId: play.playerId,
+    unitId: unit.id,
+    abilityId: quirk.id
+  } as any);
+
+  return events;
 }
