@@ -123,15 +123,22 @@ export function resolveActiveQuirk(
      if (cmd.target && typeof cmd.target === "object" && 'q' in cmd.target) {
         const hex = cmd.target as {q: number, r: number};
         const type = quirk.id === "deduction_trap_skill" ? "deduction_trap_1" : "deduction_trap_2";
-        // Need to import createTrap properly! Let's just create the object manually or assume it works for now? Wait, createTrap is in game/trap.
-        // We'll require it inside the block or just manually assign.
+        
+        // Remove any existing traps placed by this specific L Gato instance
+        for (const tid of Object.keys(state.traps)) {
+            if (state.traps[tid].sourceEntityId === entity.id) {
+                delete state.traps[tid];
+            }
+        }
+        
         const tId = `tr_${Date.now()}_${Math.random()}`;
         state.traps[tId] = {
            id: tId,
            owner: playerId,
            type: type,
            position: hex,
-           modifiers: []
+           modifiers: [],
+           sourceEntityId: entity.id
         };
         console.log(`[QuirkSystem] L Gato placed a deduction trap at ${hex.q},${hex.r}`);
      }

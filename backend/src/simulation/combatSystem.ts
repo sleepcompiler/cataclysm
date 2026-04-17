@@ -137,6 +137,26 @@ export function processDamageAndDeath(state: GameState): {
 
   for (const u of allUnits) {
     if (u.hasAttackedThisTurn || u.hp <= 0) continue;
+    
+    if (u.type === "zenyatsu") {
+       if (!u.hasMovedThisTurn) {
+          const stats = getEffectiveStats(u, false);
+          const foundList = findTargets(u, allUnits, allBuildings, u.owner, stats.range, 1);
+          if (foundList.length > 0) {
+            intents.push({
+              attacker: u,
+              attackerIsBuilding: false,
+              target: foundList[0].target,
+              targetIsBuilding: foundList[0].isBuilding,
+              speed: 999, // strikes first
+              overrideDamage: 80
+            });
+            console.log(`[combat] Zenyatsu was still and strikes first with 80 dmg!`);
+          }
+       }
+       continue; // skips normal combat intent
+    }
+
     const stats = getEffectiveStats(u, false);
     const foundList = findTargets(u, allUnits, allBuildings, u.owner, stats.range, 1);
     if (foundList.length > 0) {

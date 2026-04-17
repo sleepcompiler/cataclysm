@@ -70,6 +70,14 @@ export function processMovement(state: GameState, movements: MoveUnitCommand[]):
         if (trap.type === "cucumber") {
            // stops movement, frightens unit (ends action entirely)
            unit.hasAttackedThisTurn = true; 
+        } else if (trap.type.startsWith("deduction_trap")) {
+           // L Gato deduction trap
+           unit.hasAttackedThisTurn = true;
+           const ownerState = state.players[trap.owner];
+           if (ownerState) {
+              ownerState.catnip += 1;
+              console.log(`[movement] Trap! ${ownerState.name} gains 1 catnip.`);
+           }
         }
 
         // trap is consumed

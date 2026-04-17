@@ -78,6 +78,7 @@ export interface Trap {
   type: string;
   position: TileId;
   modifiers: Modifier[];
+  sourceEntityId?: string;
 }
 
 export interface PlayerState {

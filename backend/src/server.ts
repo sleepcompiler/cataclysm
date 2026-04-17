@@ -30,9 +30,8 @@ function serveStatic(res: http.ServerResponse, filePath: string): boolean {
   if (fs.statSync(filePath).isDirectory()) return false;
   const ext = path.extname(filePath).toLowerCase();
   const mime = MIME[ext] ?? "application/octet-stream";
-  const content = fs.readFileSync(filePath);
   res.writeHead(200, { "Content-Type": mime });
-  res.end(content);
+  fs.createReadStream(filePath).pipe(res);
   return true;
 }
 
