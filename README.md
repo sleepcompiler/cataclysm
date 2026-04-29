@@ -30,3 +30,25 @@ this spins up both the frontend (localhost:5173) and the websocket server (local
 - **deckbuilder**: standard decks need exactly 25 cards and at least one stage 1 unit or building to be playable on turn 1. stage 2 and stage 3 units cannot be played directly.
 - **matchmaking**: global queue for quick matches or 4-letter room codes for private games.
 - **active abilities**: units have active skills ranging from lifesteal to marking delayed-execution countdowns on enemy units. these resolve via dedicated command queues.
+
+## roadmap
+
+this project is in active development. here is what is planned for the future:
+
+### phase 1: user accounts & persistence
+- [ ] **user authentication**: implement secure sign-up, login, and session management using jwt or similar tokens.
+- [ ] **player profiles**: track player stats, match history, win rates, and preferred deck archetypes.
+- [ ] **persistent decks**: allow users to build and save multiple custom decks linked to their accounts in a database (e.g., postgresql or mongodb).
+- [ ] **cloud saves for progression**: track unlocked cards, player levels, and earned cosmetics.
+
+### phase 2: ranked ladder & competitive play
+- [ ] **mmr / elo system**: implement a matchmaking rating system that accurately evaluates player skill.
+- [ ] **ranked queues & matchmaking**: create a dedicated queue that matches players with similar mmr to ensure fair and competitive games.
+- [ ] **divisions & seasons**: structure the ladder into tiers (bronze, silver, gold, etc.) with monthly or quarterly seasons and end-of-season rewards.
+- [ ] **leaderboards**: global and regional top 100 leaderboards displayed on the frontend.
+
+### phase 3: core mechanics & expansion
+- [ ] **expanded roster**: introduce new anime-inspired cat factions with unique evolution triggers and catalyst cards.
+- [ ] **spectator mode**: allow players to watch live games from top-tier ladder matches or their friends.
+- [ ] **tournaments**: built-in bracket systems for automated weekend tournaments.
+- [ ] **animations & vfx**: polish the frontend rendering with smooth attack animations, spell effects, and board interactions.
