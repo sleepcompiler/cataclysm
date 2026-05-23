@@ -78,9 +78,23 @@
 </script>
 
 <main class="app-container" class:easy-read={easyReadMode}>
+  {#if view === 'menu' || view === 'instructions'}
+    <div class="top-actions">
+      <button 
+        class="easy-read-btn" 
+        on:click={() => easyReadMode = !easyReadMode}
+        aria-label="Toggle easy read mode"
+      >
+        {easyReadMode ? '🎨 Original Font' : '📖 Easy Read'}
+      </button>
+      {#if view === 'menu'}
+        <button class="help-btn" on:click={() => view = 'instructions'} title="How to Play" aria-label="How to Play">?</button>
+      {/if}
+    </div>
+  {/if}
+
   {#if view === 'menu'}
     <div class="menu">
-      <button class="help-btn" on:click={() => view = 'instructions'} title="How to Play" aria-label="How to Play">?</button>
       {#if $lobbyErrorStore}
         <div class="error-banner">
           <span>{$lobbyErrorStore}</span>
@@ -211,15 +225,6 @@
       <p class="connecting">Connecting to match...</p>
     {/if}
   {/if}
-
-  <button 
-    class="easy-read-btn" 
-    class:in-game={view === 'game'}
-    on:click={() => easyReadMode = !easyReadMode}
-    aria-label="Toggle easy read mode"
-  >
-    {easyReadMode ? '🎨 Original Font' : '📖 Easy Read'}
-  </button>
 </main>
 
 <style>
@@ -266,9 +271,6 @@
   }
 
   .help-btn {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -283,7 +285,6 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     transition: all 0.2s ease-in-out;
     font-weight: bold;
-    z-index: 1000;
   }
 
   .help-btn:hover {
@@ -753,20 +754,16 @@
   }
 
   .easy-read-btn {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
     padding: 10px 20px;
     font-size: 0.9rem;
-    background: #1e293b;
-    border: 2px solid #334155;
+    background: #334155;
+    border: 2px solid transparent;
     color: var(--text-main);
     border-radius: var(--btn-radius);
     font-weight: bold;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     transition: all 0.2s ease-in-out;
-    z-index: 9999;
     font-family: 'Google Sans', 'Product Sans', 'Inter', sans-serif;
   }
 
@@ -777,8 +774,13 @@
     box-shadow: 0 0 20px rgba(255, 96, 144, 0.4);
   }
 
-  .easy-read-btn.in-game {
-    right: auto;
-    left: 1.5rem;
+  .top-actions {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    z-index: 9999;
   }
 </style>

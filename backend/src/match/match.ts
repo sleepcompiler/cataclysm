@@ -6,6 +6,8 @@ import { createBuilding } from "../game/building";
 import { calculateTerritory } from "../territory/territorySystem";
 import { resolveInstantCardPlay } from "../simulation/phaseSystem";
 import { resolveActiveQuirk } from "../simulation/quirkSystem";
+import { db } from "../db/store";
+import { calcEloDeltas } from "../game/elo";
 
 export class Match {
   public id: string;
@@ -20,6 +22,7 @@ export class Match {
   private pendingCommands: ClientCommand[] = [];
 
   private eventCallback?: (events: any[]) => void;
+  private hasProcessedEnd: boolean = false;
 
   setEventCallback(cb: (events: any[]) => void) {
     this.eventCallback = cb;
@@ -186,6 +189,11 @@ export class Match {
 
     const events = this.engine.tickTurn(actingPlayerId, movements, nextPlayerId);
 
+    const newState = this.engine.getState();
+    if (newState.activePlayers.length <= 1) {
+      this.handleMatchEnd(events);
+    }
+
     this.pendingCommands = [];
     this.currentPlayerIndex = this.players.findIndex(p => p.id === nextPlayerId);
     this.emit(events);
@@ -223,5 +231,82 @@ export class Match {
     }
 
     return state;
+  }
+
+  private handleMatchEnd(events: any[]) {
+    if (this.hasProcessedEnd) return;
+    this.hasProcessedEnd = true;
+
+    const state = this.engine.getState();
+    const players = this.players;
+
+    if (players.length !== 2) return;
+
+    const pA = players[0];
+    const pB = players[1];
+
+    const ratingA = db.findOne("ratings", r => r.userId === pA.id) || {
+      userId: pA.id, elo: 1200, wins: 0, losses: 0, draws: 0, lastPlayedAt: Date.now()
+    };
+    const ratingB = db.findOne("ratings", r => r.userId === pB.id) || {
+      userId: pB.id, elo: 1200, wins: 0, losses: 0, draws: 0, lastPlayedAt: Date.now()
+    };
+
+    let result: "a" | "b" | "draw";
+    if (state.activePlayers.length === 0) {
+      result = "draw";
+    } else {
+      const winnerId = state.activePlayers[0];
+      result = winnerId === pA.id ? "a" : "b";
+    }
+
+    const deltas = calcEloDeltas(ratingA.elo, ratingB.elo, result);
+
+    const newEloA = Math.max(100, ratingA.elo + deltas.a);
+    const newEloB = Math.max(100, ratingB.elo + deltas.b);
+
+    db.upsert("ratings", r => r.userId === pA.id, {
+      userId: pA.id,
+      elo: newEloA,
+      wins: ratingA.wins + (result === "a" ? 1 : 0),
+      losses: ratingA.losses + (result === "b" ? 1 : 0),
+      draws: ratingA.draws + (result === "draw" ? 1 : 0),
+      lastPlayedAt: Date.now()
+    });
+
+    db.upsert("ratings", r => r.userId === pB.id, {
+      userId: pB.id,
+      elo: newEloB,
+      wins: ratingB.wins + (result === "b" ? 1 : 0),
+      losses: ratingB.losses + (result === "a" ? 1 : 0),
+      draws: ratingB.draws + (result === "draw" ? 1 : 0),
+      lastPlayedAt: Date.now()
+    });
+
+    db.insert("matches", {
+      id: this.id,
+      playerIds: [pA.id, pB.id],
+      winnerId: result === "draw" ? null : (result === "a" ? pA.id : pB.id),
+      eloChanges: {
+        [pA.id]: deltas.a,
+        [pB.id]: deltas.b
+      },
+      playedAt: Date.now()
+    });
+
+    console.log(`[Match] Finished. Winner: ${result}. Deltas: A(${deltas.a}), B(${deltas.b})`);
+
+    events.push({
+      type: "match_finished",
+      winnerId: result === "draw" ? null : (result === "a" ? pA.id : pB.id),
+      eloChanges: {
+        [pA.id]: deltas.a,
+        [pB.id]: deltas.b
+      },
+      newRatings: {
+        [pA.id]: newEloA,
+        [pB.id]: newEloB
+      }
+    });
   }
 }

@@ -16,6 +16,7 @@
     selectedUnitIdStore,
     damagePopupsStore,
     dragDropStore,
+    matchResultStore,
   } from "../game/gameClient";
 
   let canvas: HTMLCanvasElement;
@@ -158,7 +159,7 @@
         card?.effects.some((e) => e.type === "molt_unit") ?? false;
 
       if (isSpawnCard && !renderer.isValidSpawnTile(hex.q, hex.r)) {
-        // invalid spawn tile — deselect and bail
+        // invalid spawn tile -- deselect and bail
         $selectedCardIdStore = null;
         renderer.setSelectedCard(null);
         renderer.setSelectedTile(null);
@@ -241,7 +242,7 @@
     // --- unit move mode (only on your turn) ---
     if (isMyTurn && selectedUnitId) {
       if (renderer.isInMovementRange(hex.q, hex.r)) {
-        // valid destination — execute the move instantly
+        // valid destination -- execute the move instantly
         const unit = $gameStateStore?.units[selectedUnitId];
         sendCommand({
           type: "move_unit",
@@ -256,7 +257,7 @@
       return;
     }
 
-    // --- unit select mode — click on any unit to pick it up (for info) or select for move ---
+    // --- unit select mode -- click on any unit to pick it up (for info) or select for move ---
     const unitHere = Object.values($gameStateStore?.units ?? {}).find(
       (u) => u.position.q === hex.q && u.position.r === hex.r,
     );
@@ -278,7 +279,7 @@
       return;
     }
 
-    // --- building select mode — click on a building to inspect it ---
+    // --- building select mode -- click on a building to inspect it ---
     const buildingHere = Object.values($gameStateStore?.buildings ?? {}).find(
       (b) => b.position.q === hex.q && b.position.r === hex.r,
     );
@@ -309,7 +310,7 @@
 
   $: turnLabel = "";
 
-  // Auto-cleanup for damage popups — done in a timer to avoid Svelte reactive loops
+  // Auto-cleanup for damage popups -- done in a timer to avoid Svelte reactive loops
   let popupTimer: ReturnType<typeof setInterval>;
   onMount(() => {
     popupTimer = setInterval(() => {
@@ -447,6 +448,19 @@
             It's a draw!
           {/if}
         </p>
+
+        {#if $matchResultStore && $playerIdStore && $matchResultStore.eloChanges[$playerIdStore] !== undefined}
+          {@const delta = $matchResultStore.eloChanges[$playerIdStore]}
+          {@const rating = $matchResultStore.newRatings[$playerIdStore]}
+          <div class="elo-popup-display">
+            <span class="elo-label">Rating:</span>
+            <span class="elo-rating">{rating}</span>
+            <span class="elo-delta" class:plus={delta >= 0} class:minus={delta < 0}>
+              ({delta >= 0 ? '+' : ''}{delta} ELO)
+            </span>
+          </div>
+        {/if}
+
         <button class="return-btn" on:click={() => window.location.reload()}
           >Exit to Menu</button
         >
@@ -552,4 +566,36 @@
   .game-over-modal { background: #222; padding: 30px; border-radius: 12px; text-align: center; border: 2px solid #444; }
   .victory-text { font-size: 24px; color: #ffd700; margin-bottom: 10px; }
   .return-btn { background: #4a90e2; padding: 12px 24px; color: white; border-radius: 8px; }
+
+  .elo-popup-display {
+    margin: 1rem 0 1.5rem 0;
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .elo-label {
+    color: #94a3b8;
+  }
+
+  .elo-rating {
+    color: #fff;
+  }
+
+  .elo-delta.plus {
+    color: #4ade80;
+    text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+  }
+
+  .elo-delta.minus {
+    color: #f87171;
+    text-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
+  }
 </style>

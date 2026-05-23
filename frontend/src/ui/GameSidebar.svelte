@@ -55,7 +55,7 @@
     <div class="banner-text">
       {turnLabel}
       {#if selectedUnitId}
-        <span class="sub"> — select destination</span>
+        <span class="sub"> -- select destination</span>
       {/if}
     </div>
     

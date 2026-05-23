@@ -47,7 +47,7 @@ export function resolveInstantCardPlay(
       const hasMoltEffect   = card.effects.some(e => e.type === "molt_unit" || e.type === "rush_molt");
 
       if (hasMoltEffect) {
-        // molt target? — check for a friendly unit of the right base type
+        // molt target? -- check for a friendly unit of the right base type
         const baseType = (card as any).moltsFrom as string;
         const unitOnTile = Object.values(state.units).find(
           u => u.owner === play.playerId && u.position.q === hexTarget.q && u.position.r === hexTarget.r && u.type === baseType
@@ -77,12 +77,12 @@ export function resolveInstantCardPlay(
             isValidPlay = true;
           }
         } else {
-          // Direct Spawn attempt — Molt cards CANNOT be spawned directly anymore (must use Spirit card)
+          // Direct Spawn attempt -- Molt cards CANNOT be spawned directly anymore (must use Spirit card)
           console.log(`[PhaseSystem] Direct spawn rejected: ${card.name} must be molted from a unit or pulled via Spirit.`);
           isValidPlay = false;
         }
       } else if (hasSpawnEffect) {
-        // spawn target — must be friendly territory, non-water
+        // spawn target -- must be friendly territory, non-water
         if (!tile || tile.terrain === "water") {
           console.log(`[PhaseSystem] Invalid spawn: tile ${tileKey} is water or doesn't exist`);
           isValidPlay = false;
@@ -114,7 +114,7 @@ export function resolveInstantCardPlay(
     }
 
     if (!isValidPlay) {
-      // Card and catnip are NOT consumed — validation runs before spending resources.
+      // Card and catnip are NOT consumed -- validation runs before spending resources.
       return events;
     }
 
@@ -260,7 +260,7 @@ export function resolveInstantCardPlay(
           // One-hit absorb: the modifier acts as the shield. Combat strips it on the first hit.
           // If the unit goes untouched this turn it expires naturally at end_of_turn cleanup.
           u.modifiers.push({ source: "cardboard_box", stat: "speed", amount: 0, duration: "end_of_turn" });
-          console.log(`[PhaseSystem] Cardboard Box applied to ${u.type} — absorbs 1 hit or expires this turn`);
+          console.log(`[PhaseSystem] Cardboard Box applied to ${u.type} -- absorbs 1 hit or expires this turn`);
         }
       }
 
@@ -520,7 +520,7 @@ export function resolveInstantCardPlay(
   return events;
 }
 
-/** Start the turn for a specific player (sequential turns — only they draw + get catnip). */
+/** Start the turn for a specific player (sequential turns -- only they draw + get catnip). */
 export function startNextTurn(state: GameState, nextPlayerId: string, prevPlayerId: string) {
   state.turn += 1;
   state.phase = "command";

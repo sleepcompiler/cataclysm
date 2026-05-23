@@ -1,7 +1,7 @@
 import { HexGrid } from "./hexGrid";
 import type { GameState, TileId, Card, Unit } from "@hex-strategy/shared";
 
-// six axial neighbors — pointy top hex
+// six axial neighbors -- pointy top hex
 const HEX_DIRS = [
   { q: 1, r: -1 }, { q: 1, r: 0 }, { q: 0, r: 1 },
   { q: -1, r: 1 }, { q: -1, r: 0 }, { q: 0, r: -1 },
@@ -187,7 +187,7 @@ export class GameRenderer {
       }
     }
 
-    // spawn zone overlay — green on friendly tiles when deploying, red on enemy/neutral
+    // spawn zone overlay -- green on friendly tiles when deploying, red on enemy/neutral
     if (isSpawnCard) {
       for (const tile of Object.values(this.state.map)) {
         if (tile.terrain === "water") continue;
@@ -200,7 +200,7 @@ export class GameRenderer {
       }
     }
 
-    // molt target overlay — purple glow on tiles that have the right unit to molt
+    // molt target overlay -- purple glow on tiles that have the right unit to molt
     if (isMoltCard && moltsFrom && this.state) {
       for (const unit of Object.values(this.state.units)) {
         if (unit.owner !== this.myPlayerId || unit.type !== moltsFrom) continue;
@@ -210,7 +210,7 @@ export class GameRenderer {
     }
 
 
-    // movement range overlay — show when a unit is selected
+    // movement range overlay -- show when a unit is selected
     if (this.selectedUnitId && this.movementRange.size > 0) {
       for (const key of this.movementRange) {
         const [q, r] = key.split(",").map(Number);

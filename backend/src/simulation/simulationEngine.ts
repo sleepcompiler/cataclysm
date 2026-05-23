@@ -32,7 +32,7 @@ export class SimulationEngine {
   ): ServerEvent[] {
     const events: ServerEvent[] = [];
 
-    // combat — speed-sorted initiative, resolves everything in one pass
+    // combat -- speed-sorted initiative, resolves everything in one pass
     this.state.phase = "attack";
     const { eliminatedPlayers, events: combatEvents } = processDamageAndDeath(this.state);
     events.push(...combatEvents);

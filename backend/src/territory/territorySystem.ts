@@ -2,7 +2,7 @@ import { GameState, TileId } from "@hex-strategy/shared";
 import { hexDistance } from "../game/hexMath";
 
 // how strong each thing's territorial claim is
-// higher number beats lower number — building beats unit, cat tower beats everything
+// higher number beats lower number -- building beats unit, cat tower beats everything
 const CLAIM_STRENGTH = {
   cat_tree: 3,
   building: 2,
@@ -41,7 +41,7 @@ export function calculateTerritory(state: GameState) {
     }
   }
 
-  // units project weak claims — only 1 tile out
+  // units project weak claims -- only 1 tile out
   for (const u of Object.values(state.units)) {
     for (const key of Object.keys(state.map)) {
       const [q, r] = key.split(",").map(Number);
@@ -58,13 +58,13 @@ export function calculateTerritory(state: GameState) {
     const claims = claimsByTile[key];
 
     if (claims.size === 0) {
-      // nobody's claiming this tile right now — it stays with whoever owns it
+      // nobody's claiming this tile right now -- it stays with whoever owns it
       // this is the sticky part: don't touch it
       continue;
     }
 
     if (claims.size === 1) {
-      // unopposed — that player takes it outright
+      // unopposed -- that player takes it outright
       const [newOwner] = claims.keys();
       if (tile.owner !== newOwner) {
         tile.owner = newOwner;
@@ -73,7 +73,7 @@ export function calculateTerritory(state: GameState) {
       continue;
     }
 
-    // contested — find the strongest claim on this tile
+    // contested -- find the strongest claim on this tile
     let bestStrength = -1;
     let bestOwner: string | undefined;
     let tie = false;
@@ -89,12 +89,12 @@ export function calculateTerritory(state: GameState) {
     }
 
     if (tie) {
-      // tied strength — current owner keeps it (territory is sticky)
+      // tied strength -- current owner keeps it (territory is sticky)
       // if it's currently unowned, a tie means nobody takes it
       continue;
     }
 
-    // clear winner — they take the tile
+    // clear winner -- they take the tile
     if (tile.owner !== bestOwner) {
       tile.owner = bestOwner;
       resultingChanges[key] = bestOwner;

@@ -2,7 +2,7 @@ import { writable, get, derived } from "svelte/store";
 import type { GameState, ClientCommand, PlayerId } from "@hex-strategy/shared";
 
 // ── Identity ─────────────────────────────────────────────────────────────────
-// Persistent player UUID — generated once, survives refreshes, links to an
+// Persistent player UUID -- generated once, survives refreshes, links to an
 // account later when we add ranked.
 function getOrCreatePlayerId(): string {
   let id = localStorage.getItem("playerId");
@@ -29,6 +29,11 @@ export const gameStateStore = writable<GameState | null>(null);
 export const playerCatnipStore = writable<number>(0);
 export const playerIdStore = writable<PlayerId | null>(getOrCreatePlayerId());
 export const activeMatchIdStore = writable<string | null>(null);
+export const matchResultStore = writable<{
+  winnerId: string | null;
+  eloChanges: Record<string, number>;
+  newRatings: Record<string, number>;
+} | null>(null);
 
 // UI State
 export const selectedCardIdStore = writable<string | null>(null);
@@ -109,7 +114,7 @@ export function connectLobby() {
 
   socket.addEventListener("open", () => {
     // Send our identity right away so the server knows who we are before
-    // we even join a queue — prevents anon_xxxxx IDs showing up in matches.
+    // we even join a queue -- prevents anon_xxxxx IDs showing up in matches.
     socket?.send(JSON.stringify({ type: "identify", playerId: get(playerIdStore), name: get(playerNameStore) }));
     // Flush anything that was queued before the socket came up
     for (const msg of pendingMessages) socket?.send(msg);
@@ -153,12 +158,13 @@ function handleServerMessage(payload: any) {
       activeMatchIdStore.set(payload.matchId);
       privateCodeStore.set(payload.matchCode);
       isSpectatorStore.set(!!payload.isSpectator);
+      matchResultStore.set(null);
 
       // Update URL so a refresh keeps us in this match
       const matchUrl = `${window.location.origin}${window.location.pathname}?match=${payload.matchCode}`;
       window.history.replaceState({ path: matchUrl }, '', matchUrl);
 
-      // The server already added us to the session when startMatch ran —
+      // The server already added us to the session when startMatch ran --
       // but we still send init so it can register our WS against our player slot.
       socket?.send(JSON.stringify({ 
         type: "init", 
@@ -321,6 +327,14 @@ function handleServerEvent(serverEvent: any, playerId: string) {
         { turn: t, playerId: pid, text: `${name} ends their turn.`, color: playerColor(pid) },
         { turn: t + 1, playerId: "", text: `Turn ${t + 1}`, color: "neutral" as const, isHeader: true }
       ]);
+      break;
+    }
+    case "match_finished": {
+      matchResultStore.set({
+        winnerId: serverEvent.winnerId,
+        eloChanges: serverEvent.eloChanges,
+        newRatings: serverEvent.newRatings
+      });
       break;
     }
   }

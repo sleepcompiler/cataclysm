@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/dev.js — runs frontend and backend dev servers without "concurrently"
+// scripts/dev.js -- runs frontend and backend dev servers without "concurrently"
 const { spawn } = require("child_process");
 
 const colors = { frontend: "\x1b[36m", backend: "\x1b[33m", reset: "\x1b[0m" };

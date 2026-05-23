@@ -29,7 +29,7 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
         return;
       }
 
-      // Lobby commands — handled before a match exists
+      // Lobby commands -- handled before a match exists
       if (data.type === "join_queue") {
         lobbyManager.joinQueue(ws, data.deck);
         return;
@@ -64,7 +64,7 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
         return;
       }
 
-      // Init — client acks a match_found and registers with the session
+      // Init -- client acks a match_found and registers with the session
       if (data.type === "init") {
         ws.playerId = data.playerId;
         ws.matchId = data.matchId;
@@ -81,7 +81,7 @@ export function setupWebSocketServer(server: Server, matchManager: MatchManager,
         return;
       }
 
-      // Game command — must already be in a match
+      // Game command -- must already be in a match
       if (!ws.playerId || !ws.matchId) return;
 
       const command = parseClientCommand(data);

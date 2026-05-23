@@ -37,7 +37,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 // ─── Session Tokens ────────────────────────────────────────────────────────────
 
 /**
- * In-memory token store. Tokens are ephemeral — they are invalidated on server
+ * In-memory token store. Tokens are ephemeral -- they are invalidated on server
  * restart. Good enough for now; we can persist them to the JSON store if needed.
  */
 const sessions = new Map<string, { userId: string; expiresAt: number }>();
@@ -66,7 +66,7 @@ export function deleteSession(token: string): void {
 
 // ─── UUID Generator ────────────────────────────────────────────────────────────
 
-/** Native UUID v4 (no external lib needed — available in Node 14.17+). */
+/** Native UUID v4 (no external lib needed -- available in Node 14.17+). */
 export function generateId(): string {
   return crypto.randomUUID();
 }

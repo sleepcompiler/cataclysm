@@ -6,6 +6,7 @@ import { MatchManager } from "./match/matchManager";
 import { LobbyManager } from "./match/lobbyManager";
 import { db } from "./db/store";
 import { hashPassword, verifyPassword, createSession, validateSession, deleteSession, generateId } from "./auth/auth";
+import { BASE_ELO, calcEloDeltas } from "./game/elo";
 
 // ─── MIME Types ────────────────────────────────────────────────────────────────
 
@@ -59,25 +60,7 @@ function extractToken(req: http.IncomingMessage): string | null {
   return null;
 }
 
-// ─── ELO ──────────────────────────────────────────────────────────────────────
-
-const BASE_ELO = 1200;
-const K = 32;
-
-function expectedScore(a: number, b: number): number {
-  return 1 / (1 + Math.pow(10, (b - a) / 400));
-}
-
-function calcEloDeltas(
-  aElo: number,
-  bElo: number,
-  result: "a" | "b" | "draw"
-): { a: number; b: number } {
-  const ea = expectedScore(aElo, bElo);
-  const sa = result === "a" ? 1 : result === "draw" ? 0.5 : 0;
-  const da = Math.round(K * (sa - ea));
-  return { a: da, b: -da };
-}
+// ELO constants and calculation utilities are imported from ./game/elo
 
 // ─── Request Handler ───────────────────────────────────────────────────────────
 
@@ -190,12 +173,12 @@ async function handleRequest(
     const fsPath = path.join(frontendDist, pathname);
     if (serveStatic(res, fsPath)) return;
 
-    // SPA fallback — serve index.html for all unknown GET requests
+    // SPA fallback -- serve index.html for all unknown GET requests
     const indexPath = path.join(frontendDist, "index.html");
     if (serveStatic(res, indexPath)) return;
   }
 
-  // Fallthrough — 404
+  // Fallthrough -- 404
   sendJson(res, 404, { error: "Not found" });
 }
 

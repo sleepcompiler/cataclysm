@@ -3,7 +3,7 @@ export interface UnitStats {
   description: string;
   hp: number;
   attack: number;
-  speed: number;   // initiative — how early it swings
+  speed: number;   // initiative -- how early it swings
   movement: number;
   range?: number;  // default to 1 if not specified
   stage: 1 | 2 | 3;
@@ -350,7 +350,7 @@ export interface BuildingStats {
   hp: number;
   attack?: number; // Optional: buildings usually don't attack unless they are towers
   range?: number;  // Optional: range of attack/effect
-  speed: number;   // defensive fire initiative — how early it shoots back
+  speed: number;   // defensive fire initiative -- how early it shoots back
   quirks?: Quirk[];
 }
 

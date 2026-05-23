@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { MatchManager, generateMatchCode } from "./matchManager";
 
-// Socket shape expected from the WS layer — playerId gets set on connection/init
+// Socket shape expected from the WS layer -- playerId gets set on connection/init
 interface LobbySocket extends WebSocket {
   playerId?: string;
   playerName?: string;
@@ -35,7 +35,7 @@ export class LobbyManager {
 
     ws.send(JSON.stringify({ type: "queue_joined", position: this.queue.length }));
 
-    // FCFS — pair up the moment we have 2 UNIQUE players
+    // FCFS -- pair up the moment we have 2 UNIQUE players
     if (this.queue.length >= 2) {
       const [a, b] = this.queue.splice(0, 2);
       this.startMatch([a, b]);

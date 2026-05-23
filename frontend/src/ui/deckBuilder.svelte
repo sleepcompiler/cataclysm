@@ -26,6 +26,9 @@
   $: sortedDeckIds = Object.keys(cardCounts).sort((a, b) => {
     const cardA = CARD_LIBRARY[a];
     const cardB = CARD_LIBRARY[b];
+    if (!cardA && !cardB) return 0;
+    if (!cardA) return 1;
+    if (!cardB) return -1;
     if (cardA.cost !== cardB.cost) return cardA.cost - cardB.cost;
     return cardA.name.localeCompare(cardB.name);
   });
@@ -299,8 +302,8 @@
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div class="deck-row" on:click={() => handleCardClick(id)}>
-              <span class="row-cost">{CARD_LIBRARY[id].cost}</span>
-              <span class="row-name">{CARD_LIBRARY[id].name}</span>
+              <span class="row-cost">{CARD_LIBRARY[id]?.cost ?? '?'}</span>
+              <span class="row-name">{CARD_LIBRARY[id]?.name ?? id}</span>
               <span class="row-count">x{cardCounts[id]}</span>
               <button class="remove-btn" on:click|stopPropagation={() => removeCard(id)}>×</button>
             </div>

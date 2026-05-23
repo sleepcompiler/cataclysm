@@ -61,7 +61,7 @@ export class JSONStore {
     process.on("SIGTERM", () => { this.flushSync(); process.exit(); });
   }
 
-  // ── Reads (instant — data is already in RAM) ─────────────────────────────
+  // ── Reads (instant -- data is already in RAM) ─────────────────────────────
 
   get<K extends keyof DBSchema>(collection: K): DBSchema[K] {
     return this.data[collection];
@@ -149,7 +149,7 @@ export class JSONStore {
     });
   }
 
-  /** Synchronous flush — only called on process exit signals. */
+  /** Synchronous flush -- only called on process exit signals. */
   flushSync(): void {
     if (!this.dirty && !fs.existsSync(this.tmpPath)) return;
     const json = JSON.stringify(this.data, null, 2);
@@ -161,7 +161,7 @@ export class JSONStore {
   /** Load the DB from disk. Returns an empty schema if the file doesn't exist yet. */
   private loadSync(): DBSchema {
     if (!fs.existsSync(this.filePath)) {
-      console.log("[store] No existing DB file — starting with empty store.");
+      console.log("[store] No existing DB file -- starting with empty store.");
       return structuredClone(EMPTY_DB);
     }
     try {
@@ -173,7 +173,7 @@ export class JSONStore {
         ...parsed,
       };
     } catch (e) {
-      console.error("[store] Failed to parse DB file — resetting to empty:", e);
+      console.error("[store] Failed to parse DB file -- resetting to empty:", e);
       return structuredClone(EMPTY_DB);
     }
   }

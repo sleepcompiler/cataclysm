@@ -40,7 +40,7 @@ export interface Unit {
   hp: number;
   maxHp: number;
   attack: number;
-  speed: number;    // higher = attacks earlier in combat — can kill before slower units retaliate
+  speed: number;    // higher = attacks earlier in combat -- can kill before slower units retaliate
   movement: number;
   position: TileId;
   pendingDamage: number;
@@ -130,7 +130,7 @@ export interface Card {
   cost: number;
   target: TargetType;
   effects: Effect[];
-  moltsFrom?: string;  // unit type this card upgrades — play it on a tile containing that unit
+  moltsFrom?: string;  // unit type this card upgrades -- play it on a tile containing that unit
   ability?: CardAbility;
   draftable?: boolean; // If false, will not appear in standard deck builders
 }

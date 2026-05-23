@@ -118,7 +118,7 @@ function findTargets(
 }
 
 export function processAttacks(state: GameState) {
-  // nothing to do here anymore — combat fully resolves in processDamageAndDeath via speed order
+  // nothing to do here anymore -- combat fully resolves in processDamageAndDeath via speed order
 }
 
 export function processDamageAndDeath(state: GameState): {
@@ -239,11 +239,11 @@ export function processDamageAndDeath(state: GameState): {
   // --- phase 2: sort by speed descending, ties broken randomly (fair coin flip) ---
   intents.sort((a, b) => b.speed - a.speed || Math.random() - 0.5);
 
-  // --- phase 3: resolve each attack immediately — fast units can kill before slow ones swing ---
+  // --- phase 3: resolve each attack immediately -- fast units can kill before slow ones swing ---
   for (const intent of intents) {
     const { attacker, attackerIsBuilding, target, targetIsBuilding } = intent;
 
-    // check both are still alive — a fast unit may have already killed this attacker
+    // check both are still alive -- a fast unit may have already killed this attacker
     const attackerHp = attackerIsBuilding
       ? (attacker as Building).hp
       : (attacker as Unit).hp;
@@ -274,7 +274,7 @@ export function processDamageAndDeath(state: GameState): {
       console.log(`[combat] ${getPlayerName(targetOwner)}'s ${targetType} hit! wasHitLastTurn set to true for next turn.`);
     }
 
-    // Cardboard Box — absorbs the first hit entirely, then the shield breaks
+    // Cardboard Box -- absorbs the first hit entirely, then the shield breaks
     if (!targetIsBuilding) {
       const boxIdx = (target as Unit).modifiers.findIndex(m => m.source === "cardboard_box");
       if (boxIdx !== -1 && dmg > 0) {
@@ -524,7 +524,7 @@ export function processDamageAndDeath(state: GameState): {
   const activeBuildings = Object.values(state.buildings);
   for (const playerId of state.activePlayers) {
     if (!activeBuildings.some(b => b.owner === playerId && b.type === "cat_tree")) {
-      console.log(`[combat] ${getPlayerName(playerId)} lost their cat_tree — eliminated`);
+      console.log(`[combat] ${getPlayerName(playerId)} lost their cat_tree -- eliminated`);
       eliminatedPlayers.push(playerId);
       events.push({ type: "player_eliminated", playerId });
     }
