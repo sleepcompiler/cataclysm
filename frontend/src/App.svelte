@@ -5,6 +5,7 @@
   import CardHand from './ui/cardHand.svelte';
   import UnitInfo from './ui/UnitInfo.svelte';
   import DeckBuilder from './ui/deckBuilder.svelte';
+  import Instructions from './ui/instructions.svelte';
 
   import {
     gameStateStore,
@@ -28,12 +29,14 @@
   import { decksStore, selectedDeckNameStore } from './game/deckStore';
   import { validateDeck } from '@hex-strategy/shared';
 
-  let view: 'menu' | 'deckbuilder' | 'game' = 'menu';
+  let view: 'menu' | 'deckbuilder' | 'game' | 'instructions' = 'menu';
   let privateCodeInput = '';
   let showJoinPrivate = false;
   let nameInput = $playerNameStore;
   let showLog = false;
   let showDeckSelect = false;
+  let easyReadMode = localStorage.getItem('easyReadMode') === 'true';
+  $: localStorage.setItem('easyReadMode', String(easyReadMode));
 
   $: if ($lobbyStatusStore === 'in_match') {
     view = 'game';
@@ -74,9 +77,10 @@
   }
 </script>
 
-<main class="app-container">
+<main class="app-container" class:easy-read={easyReadMode}>
   {#if view === 'menu'}
     <div class="menu">
+      <button class="help-btn" on:click={() => view = 'instructions'} title="How to Play" aria-label="How to Play">?</button>
       {#if $lobbyErrorStore}
         <div class="error-banner">
           <span>{$lobbyErrorStore}</span>
@@ -176,6 +180,9 @@
   {:else if view === 'deckbuilder'}
     <DeckBuilder on:back={() => view = 'menu'} />
 
+  {:else if view === 'instructions'}
+    <Instructions on:back={() => view = 'menu'} />
+
   {:else if view === 'game'}
     {#if $gameStateStore}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -204,6 +211,15 @@
       <p class="connecting">Connecting to match...</p>
     {/if}
   {/if}
+
+  <button 
+    class="easy-read-btn" 
+    class:in-game={view === 'game'}
+    on:click={() => easyReadMode = !easyReadMode}
+    aria-label="Toggle easy read mode"
+  >
+    {easyReadMode ? '🎨 Original Font' : '📖 Easy Read'}
+  </button>
 </main>
 
 <style>
@@ -247,6 +263,34 @@
     gap: 1.5rem;
     background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
     position: relative;
+  }
+
+  .help-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #334155;
+    color: white;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.2s ease-in-out;
+    font-weight: bold;
+    z-index: 1000;
+  }
+
+  .help-btn:hover {
+    background: var(--accent-pink);
+    border-color: white;
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 0 0 20px rgba(255, 96, 144, 0.5);
   }
 
   h1 {
@@ -695,5 +739,46 @@
 
   .close-error:hover {
     background: rgba(255,255,255,0.1) !important;
+  }
+
+  /* Easy Read Mode */
+  .easy-read {
+    --font-main: 'Google Sans', 'Product Sans', 'Inter', sans-serif !important;
+  }
+
+  /* Exclude the main menu (title page) from easy read font modifications to preserve branding */
+  .easy-read .menu,
+  .easy-read .menu * {
+    font-family: 'BitcountPropSingle', sans-serif !important;
+  }
+
+  .easy-read-btn {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    background: #1e293b;
+    border: 2px solid #334155;
+    color: var(--text-main);
+    border-radius: var(--btn-radius);
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.2s ease-in-out;
+    z-index: 9999;
+    font-family: 'Google Sans', 'Product Sans', 'Inter', sans-serif;
+  }
+
+  .easy-read-btn:hover {
+    background: var(--accent-pink);
+    border-color: white;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 96, 144, 0.4);
+  }
+
+  .easy-read-btn.in-game {
+    right: auto;
+    left: 1.5rem;
   }
 </style>

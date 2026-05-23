@@ -36,15 +36,13 @@ this spins up both the frontend (localhost:5173) and the websocket server (local
 this project is in active development. here is what is planned for the future:
 
 ### phase 1: user accounts & persistence
-- [ ] **user authentication**: implement secure sign-up, login, and session management using jwt or similar tokens.
-- [ ] **player profiles**: track player stats, match history, win rates, and preferred deck archetypes.
-- [ ] **persistent decks**: allow users to build and save multiple custom decks linked to their accounts in a database (e.g., postgresql or mongodb).
-- [ ] **cloud saves for progression**: track unlocked cards, player levels, and earned cosmetics.
+- [ ] **user authentication**: implement secure sign-up, login, and session management .
+- [ ] **player profiles**: track player stats, match history, win rates, and preferred cards.
+- [ ] **persistent decks**: allow users to build and save multiple custom decks linked to their accounts.
 
 ### phase 2: ranked ladder & competitive play
 - [ ] **mmr / elo system**: implement a matchmaking rating system that accurately evaluates player skill.
 - [ ] **ranked queues & matchmaking**: create a dedicated queue that matches players with similar mmr to ensure fair and competitive games.
-- [ ] **divisions & seasons**: structure the ladder into tiers (bronze, silver, gold, etc.) with monthly or quarterly seasons and end-of-season rewards.
 - [ ] **leaderboards**: global and regional top 100 leaderboards displayed on the frontend.
 
 ### phase 3: core mechanics & expansion
